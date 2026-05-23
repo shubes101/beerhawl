@@ -140,7 +140,7 @@ const MENUS: Record<string, Section[]> = {
         { name: "Pit of Carcoon", price: "14", description: "Drumshanbo Gin, Domaine de Canton ginger liqueur, cream of coconut, grapefruit, lime." },
         { name: "Adjusted for Inflation", price: "14", description: "Milagro Tequila, apricot brandy, zesty orange juice, orgeat, lime." },
         { name: "It's a Mad Mad Mad Mad Mango", price: "14", description: "Ghost Tequila, house mango mix, jalapeños." },
-        { name: "Zifia Sangria", price: "12", description: "White wine, coconut rum, pineapple, toasted coconut syrup, cream of coconut, lime." },
+        { name: "Pina Sangria", price: "12", description: "White wine, coconut rum, pineapple, toasted coconut syrup, cream of coconut, lime." },
         { name: "Chat G&T", price: "13", description: "Choose one of our three signature gins (Tanqueray, Roku, Hendrick's) paired with a premium Fever-Tree tonic (Indian, Elderflower, or Sparkling Lime Yuzu)." },
       ],
     },
