@@ -45,15 +45,16 @@ appear immediately.
    cp .env.example .env
    ```
 
-   Set `DATABASE_URL` + `DIRECT_URL` to a Postgres (a [Neon](https://neon.tech)
-   project — a free dev branch works for local). Set `ANTHROPIC_API_KEY` and
-   `TELEGRAM_BOT_TOKEN` (from [@BotFather](https://t.me/BotFather)) for the bot.
+   Set `DATABASE_URL` + `DATABASE_URL_UNPOOLED` to a Postgres (a
+   [Neon](https://neon.tech) project — a free dev branch works for local). Set
+   `ANTHROPIC_API_KEY` and `TELEGRAM_BOT_TOKEN` (from
+   [@BotFather](https://t.me/BotFather)) for the bot.
 
 3. **Create and seed the database:**
 
    ```bash
    npm run db:push   # pushes the schema to Postgres
-   npm run db:seed   # loads sample menus + events
+   npm run db:seed   # loads sample menus + events (idempotent — only seeds if empty)
    ```
 
 4. **Run:**
@@ -99,19 +100,15 @@ Now send the bot:
 ## Deploying to Vercel (with Neon Postgres)
 
 1. **Provision the database.** Add the **Neon** Postgres integration from the Vercel
-   dashboard (Storage tab), or create a project at [neon.tech](https://neon.tech).
-   You need two connection strings: the **pooled** one (host contains `-pooler`)
-   and the **direct** one.
-2. **Set env vars** in Vercel → Settings → Environment Variables (see `.env.example`):
-   `DATABASE_URL` = pooled, `DIRECT_URL` = direct, plus `ANTHROPIC_API_KEY` and the
-   `TELEGRAM_*` vars for the bot.
-3. **Create the schema** against Neon (once), from your machine with the same env:
-   ```bash
-   npm run db:push && npm run db:seed
-   ```
-4. **Deploy.** `next build` runs `prisma generate` automatically; pages read the DB
-   at request time on the Node runtime.
-5. After the first deploy, set `PUBLIC_URL` to your Vercel URL and run
+   dashboard (Storage tab). It auto-injects `DATABASE_URL` (pooled) and
+   `DATABASE_URL_UNPOOLED` (direct) — no manual DB env setup needed.
+2. **Set the remaining env vars** in Vercel → Settings → Environment Variables:
+   `ANTHROPIC_API_KEY` and the `TELEGRAM_*` vars for the bot (see `.env.example`).
+3. **Deploy.** The build runs `prisma generate && prisma db push && prisma/seed.ts`,
+   so the schema is created and sample content seeded automatically on the first
+   deploy (the seed is idempotent — it won't overwrite later edits). Pages read the
+   DB at request time on the Node runtime.
+4. After the first deploy, set `PUBLIC_URL` to your Vercel URL and run
    `npm run telegram:set-webhook` to point Telegram at `/api/telegram`.
 
 ## Notes
