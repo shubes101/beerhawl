@@ -2,7 +2,7 @@ import { SectionHeading } from "@/components/bh";
 import { MenusTabs } from "@/components/MenusTabs";
 import { MenuSections } from "@/components/MenuSections";
 import { BeerMenu } from "@/components/BeerMenu";
-import { getAllMenus } from "@/lib/data";
+import { getAllMenus, isSpecialsEnabled } from "@/lib/data";
 import { MENU_BLURBS, MENU_LABELS, MENU_TYPES } from "@/lib/restaurant";
 import { UNTAPPD_VENUE_URL } from "@/lib/untappd";
 
@@ -13,11 +13,12 @@ export const metadata = {
 };
 
 export default async function MenusPage() {
-  const menus = await getAllMenus();
+  const [menus, specialsOn] = await Promise.all([getAllMenus(), isSpecialsEnabled()]);
+  const visibleMenuTypes = MENU_TYPES.filter((t) => t !== "specials" || specialsOn);
 
   const tabs = [
     { id: "tap", label: "On Tap" },
-    ...MENU_TYPES.map((t) => ({ id: t, label: MENU_LABELS[t] })),
+    ...visibleMenuTypes.map((t) => ({ id: t, label: MENU_LABELS[t] })),
   ];
 
   return (
@@ -54,7 +55,7 @@ export default async function MenusPage() {
       </section>
 
       {/* FOOD & DRINK MENUS */}
-      {MENU_TYPES.map((type) => (
+      {visibleMenuTypes.map((type) => (
         <section key={type} id={type} className="bh-menu-section">
           <SectionHeading
             eyebrow={type === "specials" ? "Tonight Only" : "Kitchen · Bar"}

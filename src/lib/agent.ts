@@ -118,6 +118,18 @@ const TOOLS: Anthropic.Tool[] = [
       required: ["event_id"],
     },
   },
+  {
+    name: "set_specials_enabled",
+    description:
+      "Show or hide the Specials menu across the whole site (its section, its tab, and the home specials block). Turn it OFF when there are no specials; turn it back ON when specials return. Saved specials items are kept either way.",
+    input_schema: {
+      type: "object",
+      properties: {
+        enabled: { type: "boolean", description: "true to show specials, false to hide them" },
+      },
+      required: ["enabled"],
+    },
+  },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -254,6 +266,16 @@ async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
         return ok({ removed: { id, title: existing.title } });
       }
 
+      case "set_specials_enabled": {
+        const enabled = Boolean(args.enabled);
+        await prisma.setting.upsert({
+          where: { key: "specials_enabled" },
+          update: { value: String(enabled) },
+          create: { key: "specials_enabled", value: String(enabled) },
+        });
+        return ok({ specials_enabled: enabled });
+      }
+
       default:
         return fail(`Unknown tool: ${name}`);
     }
@@ -271,11 +293,13 @@ const SYSTEM: Anthropic.TextBlockParam[] = [
     type: "text",
     text: `You are the content manager for ${restaurant.name}, a beer hall in ${restaurant.city}. You receive messages and photos from the restaurant's staff over Telegram and keep the public website up to date.
 
-You can manage two things:
+You can manage:
 - Menus: ${MENU_TYPES.join(", ")}.
 - Events on the events page.
+- Whether the Specials menu is shown or hidden on the site.
 
 How to work:
+- To hide or show the Specials menu, use set_specials_enabled — turn it off when there are no specials, on when they return. If you add specials items while it's hidden, turn it back on so they show.
 - When sent a PHOTO of a menu, read every item, price, and section from the image and call replace_menu for the matching menu. If it is not clear which menu the photo is (lunch, dinner, cocktail, or specials), ask before changing anything.
 - For natural-language requests ("add taco night next Thursday at 6", "drop the schnitzel from dinner", "86 the garden gimlet"), use the appropriate tools. To remove something, list first to get its id, then remove by id.
 - Resolve relative dates using the current date given in the message.

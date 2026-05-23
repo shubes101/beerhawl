@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Arrow, Button, Eyebrow, ImageSlot, SectionHeading } from "@/components/bh";
 import { EventCard } from "@/components/EventCard";
-import { getAllMenus, getUpcomingEvents, menuItemCount } from "@/lib/data";
+import { getAllMenus, getUpcomingEvents, isSpecialsEnabled, menuItemCount } from "@/lib/data";
 import { MENU_LABELS, MENU_TYPES, restaurant } from "@/lib/restaurant";
 
 export const dynamic = "force-dynamic";
@@ -11,8 +11,13 @@ function priceLabel(p: string) {
 }
 
 export default async function HomePage() {
-  const [menus, events] = await Promise.all([getAllMenus(), getUpcomingEvents(2)]);
+  const [menus, events, specialsOn] = await Promise.all([
+    getAllMenus(),
+    getUpcomingEvents(2),
+    isSpecialsEnabled(),
+  ]);
   const specials = menus.specials.flatMap((s) => s.items).slice(0, 3);
+  const visibleMenuTypes = MENU_TYPES.filter((t) => t !== "specials" || specialsOn);
 
   return (
     <div className="bh-page">
@@ -59,7 +64,7 @@ export default async function HomePage() {
       </section>
 
       {/* SPECIALS */}
-      {specials.length > 0 && (
+      {specialsOn && specials.length > 0 && (
         <section className="bh-section">
           <SectionHeading
             eyebrow="This Week"
@@ -90,8 +95,8 @@ export default async function HomePage() {
       <section className="bh-section">
         <SectionHeading
           eyebrow="The Space"
-          title="A bar, an attic, a long shuffleboard."
-          blurb="Two rooms, a back lot, and a private space upstairs called The Attic."
+          title="A bar, an attic, a good time."
+          blurb="Biergarten, a beautiful rustic bar, a quiet dining room, an event space, and even rooms to stay."
         />
         <div className="bh-space-grid">
           <figure className="bh-space-fig bh-space-fig--lg">
@@ -117,7 +122,7 @@ export default async function HomePage() {
           blurb="Updated weekly. Texted in from the line."
         />
         <div className="bh-menulinks">
-          {MENU_TYPES.map((type, i) => {
+          {visibleMenuTypes.map((type, i) => {
             const sections = menus[type];
             return (
               <Link key={type} className="bh-menulink" href={`/menus#${type}`}>

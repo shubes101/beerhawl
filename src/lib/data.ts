@@ -66,3 +66,9 @@ export async function getUpcomingEvents(limit?: number) {
     take: limit,
   });
 }
+
+/** Specials show by default; hidden only when the flag is explicitly "false". */
+export async function isSpecialsEnabled(): Promise<boolean> {
+  const row = await prisma.setting.findUnique({ where: { key: "specials_enabled" } });
+  return row?.value !== "false";
+}
