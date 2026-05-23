@@ -120,8 +120,13 @@ const EVENTS = [
 ];
 
 async function main() {
-  await prisma.menuItem.deleteMany();
-  await prisma.event.deleteMany();
+  // Idempotent: only seed an empty database. This runs during the Vercel build,
+  // so it must not wipe content added later via the Telegram bot.
+  const existing = await prisma.menuItem.count();
+  if (existing > 0) {
+    console.log(`Seed skipped — ${existing} menu items already present.`);
+    return;
+  }
 
   for (const [menuType, sections] of Object.entries(MENUS)) {
     let order = 0;

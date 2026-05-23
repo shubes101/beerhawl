@@ -1,6 +1,7 @@
 // Postgres (Neon) for both local dev and production. DATABASE_URL is the pooled
-// connection (host contains "-pooler") used by the app at runtime; DIRECT_URL is
-// the direct connection used by `prisma db push` / migrations.
+// connection (host contains "-pooler") used by the app at runtime; the direct
+// connection is used by `prisma db push` / migrations. Neon's Vercel integration
+// injects both DATABASE_URL and DATABASE_URL_UNPOOLED automatically.
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,7 +9,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model MenuItem {

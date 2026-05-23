@@ -26,9 +26,9 @@ beers over the last 6 hours).
 
 ## Hosting + database
 
-- [x] DB provider: **Neon Postgres** (schema set to `postgresql` + `directUrl`). _(Decided.)_
-- [ ] Add the Neon integration in Vercel (or create a Neon project) and set
-      `DATABASE_URL` (pooled) + `DIRECT_URL` (direct), then run `npm run db:push && npm run db:seed`.
+- [x] DB provider: **Neon Postgres**, connected via the Vercel integration
+      (auto-injects `DATABASE_URL` + `DATABASE_URL_UNPOOLED`). The Vercel build
+      auto-creates the schema and seeds sample content — no manual DB setup. _(Done.)_
 - [ ] If on Vercel and you want the 6-hour leaderboard to refresh every few
       minutes, you'll need **Vercel Pro** (Hobby cron runs ~daily) or an external
       trigger (GitHub Actions / cron-job.org / Upstash QStash).
