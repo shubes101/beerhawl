@@ -4,6 +4,8 @@ function formatPrice(price: string): string {
   return /^\$?\d/.test(price) ? `$${price.replace("$", "")}` : price;
 }
 
+const TAG_LABEL: Record<string, string> = { veg: "VEG", vgn: "VGN", gf: "GF", gfo: "GF*" };
+
 export function MenuSections({ sections }: { sections: MenuSection[] }) {
   if (sections.length === 0) {
     return <p className="bh-blurb">This menu hasn&apos;t been published yet — check back soon.</p>;
@@ -18,7 +20,14 @@ export function MenuSections({ sections }: { sections: MenuSection[] }) {
             {section.items.map((item) => (
               <li key={item.id} className="bh-mi">
                 <div className="bh-mi__row">
-                  <div className="bh-mi__name">{item.name}</div>
+                  <div className="bh-mi__name">
+                    {item.name}
+                    {item.tags.map((t) => (
+                      <span key={t} className="bh-tag">
+                        {TAG_LABEL[t] ?? t.toUpperCase()}
+                      </span>
+                    ))}
+                  </div>
                   <div className="bh-mi__dots" aria-hidden="true" />
                   {item.price && <div className="bh-mi__price">{formatPrice(item.price)}</div>}
                 </div>

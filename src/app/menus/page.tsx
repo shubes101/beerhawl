@@ -65,6 +65,10 @@ export default async function MenusPage() {
           <MenuSections sections={menus[type]} />
         </section>
       ))}
+
+      <p className="bh-menu-legend">
+        VEG vegetarian · VGN vegan · GF gluten-free · GF* gluten-free option
+      </p>
     </div>
   );
 }

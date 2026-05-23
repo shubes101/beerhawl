@@ -42,6 +42,11 @@ const TOOLS: Anthropic.Tool[] = [
                 type: "string",
                 description: "Free-form price as printed, e.g. '14', '$14', or 'Market'.",
               },
+              tags: {
+                type: "array",
+                items: { type: "string", enum: ["veg", "vgn", "gf", "gfo"] },
+                description: "Dietary tags. Map menu marks: (v)→veg, (veg)→vgn, (GF)→gf, (GFO)→gfo.",
+              },
             },
             required: ["name"],
           },
@@ -61,6 +66,11 @@ const TOOLS: Anthropic.Tool[] = [
         name: { type: "string" },
         description: { type: "string" },
         price: { type: "string" },
+        tags: {
+          type: "array",
+          items: { type: "string", enum: ["veg", "vgn", "gf", "gfo"] },
+          description: "Dietary tags: (v)→veg, (veg)→vgn, (GF)→gf, (GFO)→gfo.",
+        },
       },
       required: ["menu_type", "name"],
     },
@@ -157,6 +167,11 @@ function fail(message: string): ToolOutput {
   return { content: JSON.stringify({ error: message }), isError: true };
 }
 
+const ALLOWED_TAGS = ["veg", "vgn", "gf", "gfo"];
+function cleanTags(v: unknown): string[] {
+  return Array.isArray(v) ? v.map(String).filter((t) => ALLOWED_TAGS.includes(t)) : [];
+}
+
 async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
   const args = (input ?? {}) as Record<string, unknown>;
   try {
@@ -176,6 +191,7 @@ async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
               name: String(it.name ?? "").trim(),
               description: it.description ? String(it.description) : null,
               price: it.price !== undefined && it.price !== null ? String(it.price) : null,
+              tags: cleanTags(it.tags),
               sortOrder: i,
             })),
           }),
@@ -197,6 +213,7 @@ async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
             name: String(args.name ?? "").trim(),
             description: args.description ? String(args.description) : null,
             price: args.price !== undefined && args.price !== null ? String(args.price) : null,
+            tags: cleanTags(args.tags),
             sortOrder: (last?.sortOrder ?? -1) + 1,
           },
         });
@@ -226,6 +243,7 @@ async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
             name: i.name,
             description: i.description,
             price: i.price,
+            tags: i.tags,
           })),
         });
       }
@@ -305,6 +323,7 @@ How to work:
 - For natural-language requests ("add taco night next Thursday at 6", "drop the schnitzel from dinner", "86 the garden gimlet"), use the appropriate tools. To remove something, list first to get its id, then remove by id.
 - Resolve relative dates using the current date given in the message.
 - Read prices and item names exactly as written; don't invent items, descriptions, or prices. If something in a photo is unreadable, make your best guess and mention the uncertainty in your reply.
+- Capture dietary marks as each item's tags: (v)→veg, (veg)→vgn, (GF)→gf, (GFO)→gfo.
 - A separate system already posts a "captured" readout and a "saved" confirmation for each change, so your final reply should be one short, friendly line — and call out anything you were unsure about (e.g. an item or price you couldn't read clearly). No preamble, no markdown.`,
     cache_control: { type: "ephemeral" },
   },

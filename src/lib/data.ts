@@ -8,6 +8,7 @@ export type MenuSection = {
     name: string;
     description: string | null;
     price: string | null;
+    tags: string[];
   }[];
 };
 
@@ -34,6 +35,7 @@ export async function getMenu(menuType: MenuType): Promise<MenuSection[]> {
       name: item.name,
       description: item.description,
       price: item.price,
+      tags: item.tags,
     });
   }
 

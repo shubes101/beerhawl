@@ -8,7 +8,7 @@ function day(yyyyMmDd: string): Date {
   return new Date(`${yyyyMmDd}T12:00:00.000Z`);
 }
 
-type Item = { name: string; price?: string; description?: string };
+type Item = { name: string; price?: string; description?: string; tags?: string[] };
 type Section = { name: string; items: Item[] };
 
 const MENUS: Record<string, Section[]> = {
@@ -42,51 +42,113 @@ const MENUS: Record<string, Section[]> = {
   ],
   dinner: [
     {
-      name: "Starters",
+      name: "Shareables",
       items: [
-        { name: "Oyster Mushroom Toast", price: "14", description: "Wood-roasted mushrooms, whipped ricotta, lemon, charred levain." },
-        { name: "Chicken Liver Mousse", price: "13", description: "Bourbon, brown butter, grilled brioche, pickled shallot." },
-        { name: "Charred Cabbage", price: "12", description: "Smoked anchovy butter, pangrattato, lemon." },
-        { name: "Steak Tartare", price: "18", description: "Hand-cut, capers, dijon, quail egg, frites." },
+        { name: "Vesper Board", price: "38", description: "German fare intended to feed 2–3: three chilled sausages, cheeses, various accoutrements." },
+        { name: "Smoke Show Nachos", price: "22", description: "White corn tortilla chips, smoked pulled pork, beer cheese, shredded lettuce, roasted corn, pickled red onion and jalapeño, lime crema, chimichurri." },
+        { name: "Sesame & Sea Salt Pretzel", price: "16", description: "Bavarian soft pretzel with sesame seeds, B&B pickles, German mustard, beer cheese.", tags: ["veg"] },
+        { name: "French Onion Soup", price: "12", description: "Port wine beef stock, pretzel croutons, gruyère, provolone, fried leeks, scallions.", tags: ["gfo"] },
+        { name: "Roasted Red Pepper Hummus", price: "16", description: "White bean, roasted garlic and red pepper blend, crispy chickpeas, olive tapenade, EVOO, charred cauliflower, fresh carrot and cucumber, seasoned house pita.", tags: ["vgn", "gfo"] },
+        { name: "Obatzda", price: "16", description: "Warm Bavarian cheese dip — brie, cream cheese, schwarzbier, onion, chive, paprika, caraway. Crispy shallots, served with pretzel nuggets.", tags: ["veg"] },
+        { name: "Crab Dip", price: "20", description: "Creamy blend of crab claw meat, cream cheese, mozzarella, gruyère, old bay, lemon, scallions. Served with white corn tortilla chips.", tags: ["gfo"] },
+        { name: "Marinated Wings", price: "18", description: "Choice of: Buffalo, Dry Rub, Ginger Soy, Honey Gochujang, Honey Old Bay, Nashville Hot Bacon, Spice Bag Dry Rub, or Guinness BBQ.", tags: ["gfo"] },
+        { name: "Peach Caprese", price: "18", description: "Hot honey-roasted peaches, heirloom tomatoes, fresh mozzarella, pesto-marinated ciliegine, marinated cherry tomatoes, balsamic glaze, basil.", tags: ["veg", "gfo"] },
+        { name: "Potstickers", price: "13", description: "Chicken, corn, lemongrass and onion potstickers. Ginger soy glaze, sesame seeds, scallions." },
+        { name: "Shaved Brussels Sprouts", price: "14", description: "Bacon, apples, balsamic glaze, goat cheese crumbles.", tags: ["gf"] },
+        { name: "Fried Green Tomatoes", price: "16", description: "Burrata, honey, balsamic glaze, pork belly, pickled red onions, arugula." },
+        { name: "Cheese Curds", price: "12", description: "Served with marinara.", tags: ["veg"] },
+        { name: "Fried Pickle Chips", price: "12", description: "Served with ranch.", tags: ["veg"] },
       ],
     },
     {
-      name: "Mains",
+      name: "The Passion of the Crust",
       items: [
-        { name: "Half Chicken, Beer Brick", price: "26", description: "Pressed under a kettle weight over coals. Schmaltz potatoes, salsa verde." },
-        { name: "Dry-Aged Strip", price: "44", description: "14 oz, bone-in, smoked bone marrow, watercress." },
-        { name: "Trout Almondine", price: "29", description: "Whole-roasted, brown butter, capers, charred lemon." },
-        { name: "Pork Schnitzel", price: "27", description: "Hand-pounded, lingonberry, spätzle, dill." },
-        { name: "Mushroom Spätzle", price: "22", description: "Hand-rolled noodles, cremini, brown butter, parmigiano." },
-        { name: "Roasted Cauliflower", price: "21", description: "Whole head, tahini, sumac, charred scallion." },
+        { name: "Classic Cheese", price: "16", description: "Marinara, mozzarella… duh.", tags: ["veg"] },
+        { name: "Truffle Mushroom", price: "22", description: "Mushroom blend, pork belly, crispy shallots, truffle zest, mozzarella." },
+        { name: "Peach Hot Honey", price: "20", description: "Roasted peaches, bacon, burrata, arugula, Mike's Hot Honey, balsamic glaze." },
+        { name: "Pepperoni", price: "18", description: "Cupped pepperoni, mozzarella, Mike's Hot Honey." },
+        { name: "Burrata Margherita", price: "18", description: "Heirloom tomatoes, mozzarella, fresh basil.", tags: ["veg"] },
+        { name: "Veggie", price: "18", description: "Heirloom tomatoes, mozzarella, pickled red onions, mushrooms, asparagus, arugula, balsamic glaze.", tags: ["veg"] },
+        { name: "Pesto Chicken", price: "20", description: "Braised chicken, house pesto, mozzarella, marinated tomatoes, red onion." },
+      ],
+    },
+    {
+      name: "Sandwiches",
+      items: [
+        { name: "Farm-Raised Grilled Chicken", price: "18", description: "Marinated chicken breast, thick cut bacon, honey mustard, tomato, romaine, red onion, brioche bun. Served with fries.", tags: ["gfo"] },
+        { name: "Irish Spice Bag Chicken", price: "20", description: "Fried chicken thigh, spice bag seasoning, charred bell pepper and onion, arugula, Irish curry aioli, brioche bun. Served with fries." },
+        { name: "Salmon BLT", price: "22", description: "Salmon, thick cut bacon, romaine, tomato, lemon dill aioli, sourdough. Served with fries.", tags: ["gfo"] },
+        { name: "Bison Burger", price: "22", description: "Ground bison, bacon, brie, arugula, balsamic glaze, truffle mayo, crispy shallots, brioche bun. Cooked pink or no pink. Served with fries." },
+        { name: "The Schnitzel", price: "18", description: "Breaded pork loin, arugula, lemon dill aioli, pickled red onion, lemon zest, pretzel bun. Served with fries." },
+        { name: "Inglorious Bratwurst", price: "18", description: "Grilled burnt-end bratwurst, bier-braised kraut, German mustard, beer cheese, pretzel roll. Served with fries." },
+        { name: "Smash Burger", price: "16", description: "4oz medium-well patty, white cheddar, special sauce, B&B pickles, grilled onion, tomato, romaine, brioche. Served with fries. Can be made vegetarian with portobello mushroom.", tags: ["gfo"] },
+        { name: "Gruzka's Smoked Pulled Pork", price: "20", description: "Smoked pulled pork, coleslaw, arugula, pretzel bun. Served with a side of Guinness BBQ and fries.", tags: ["gfo"] },
+        { name: "Reuben Cheesesteak", price: "18", description: "Smoked pulled pastrami, bier-braised kraut, gruyère, house Russian dressing, pretzel roll. Served with fries.", tags: ["gfo"] },
+      ],
+    },
+    {
+      name: "Salads",
+      items: [
+        { name: "Balsamic Salad", price: "16", description: "Arcadian lettuce, charred cauliflower, crispy shaved sprouts, marinated cherry tomatoes, goat cheese crumbles, pickled red onions, pretzel croutons, blistered tomato vinaigrette, balsamic glaze. Add chicken +8, salmon +11, shrimp +10, steak +11, or tofu +7.", tags: ["veg"] },
+        { name: "Goat Cheese Salad", price: "16", description: "Arugula, crispy goat cheese, pickled blueberries, red onion, spiced walnuts, blueberry thyme yuzu dressing.", tags: ["veg"] },
+        { name: "Falafel Salad", price: "17", description: "Arcadian lettuce, fried falafel balls, cucumber, marinated cherry tomatoes, pickled red onion, crispy chickpeas, green goddess dressing, vegan dill aioli.", tags: ["vgn", "gf"] },
+        { name: "Wedge", price: "16", description: "Iceberg wedge, candied bacon, avocado, hard boiled egg, marinated tomato, red onion, bleu cheese crumbles and bleu cheese dressing.", tags: ["gf"] },
+        { name: "Caesar Salad", price: "15", description: "Romaine, shaved parmesan, pretzel croutons, caesar dressing.", tags: ["veg", "gfo"] },
+      ],
+    },
+    {
+      name: "Large Plates",
+      items: [
+        { name: "Baked Mac & Cheese", price: "16", description: "Pretzel breadcrumbs and scallions. Add chicken +8, lobster +14, pork belly +9, shrimp +10, steak +11, or tofu +7.", tags: ["veg"] },
+        { name: "Fish and Chips", price: "26", description: "Beer-battered flounder served with coleslaw, fries, malt vinegar aioli, cocktail sauce, tartar, lemon." },
+        { name: "Steamed Mussels", price: "20", description: "Served with choice of fries or bread. Broth options: Irish curry crème; Belgian bier (bacon & bell pepper); Fra Diavolo (spicy tomato); or lemon pepper crème." },
+        { name: "Pork Schnitzel", price: "28", description: "Breaded pork loin served with German potato salad, side arugula salad, pickled red onions, side demi-glace." },
       ],
     },
     {
       name: "Sides",
       items: [
-        { name: "Spätzle", price: "9" },
-        { name: "Smashed Potatoes", price: "8" },
-        { name: "Roasted Carrots", price: "9", description: "Honey, harissa, yogurt." },
-        { name: "Long Bean Salad", price: "10" },
+        { name: "Fries", price: "7" },
+        { name: "Truffle Fries", price: "8" },
+        { name: "Irish Curry Fries", price: "8" },
+        { name: "German Potato Salad", price: "6", tags: ["gf"] },
+        { name: "Spätzle", price: "8" },
+        { name: "Coleslaw", price: "6", tags: ["gf"] },
+        { name: "Mixed Green Salad", price: "6", tags: ["gf"] },
+        { name: "Caesar Salad", price: "6", tags: ["gfo"] },
+      ],
+    },
+    {
+      name: "Kids in the Haul",
+      items: [
+        { name: "Kids Pizza", price: "10", description: "For children 12 and under. Served with a soft drink or apple juice." },
+        { name: "Cheeseburger and Fries", price: "10", description: "For children 12 and under. Served with a soft drink or apple juice." },
+        { name: "Fingers and Fries", price: "10", description: "For children 12 and under. Served with a soft drink or apple juice." },
+        { name: "Buttered Noodles", price: "10", description: "For children 12 and under. Served with a soft drink or apple juice." },
       ],
     },
   ],
   cocktail: [
     {
-      name: "Signatures",
+      name: "Potent Potables",
       items: [
-        { name: "Garden Gimlet", price: "13", description: "Gin, snap pea cordial, lime, mint." },
-        { name: "Smoke & Honey", price: "14", description: "Mezcal, wildflower honey, lemon, chile tincture." },
-        { name: "Farmer's Old Fashioned", price: "15", description: "Rye, maple, black walnut bitters, orange." },
-        { name: "Plum Sour", price: "13", description: "Bourbon, shiso, plum, lemon, egg white." },
-        { name: "Bee's Knees", price: "13", description: "Gin, honey, lemon, salt." },
+        { name: "BH Old Fashioned", price: "13", description: "Old Overholt Rye, turbinado, Regan's Orange & Angostura bitters." },
+        { name: "Ol' King Julius", price: "15", description: "Larceny Bourbon, vanilla turbinado, orange cream bitters, lactose." },
+        { name: "Ghost Ship", price: "13", description: "Pilar Rum, aged pineapple rum syrup, sparkling coconut water, lime." },
+        { name: "Roman Holiday", price: "14", description: "Tito's Vodka, Aperol, strawberry basil shrub, lemon, Prosecco." },
+        { name: "Casper Tea", price: "14", description: "House-clarified Long Island iced tea." },
+        { name: "Pit of Carcoon", price: "14", description: "Drumshanbo Gin, Domaine de Canton ginger liqueur, cream of coconut, grapefruit, lime." },
+        { name: "Adjusted for Inflation", price: "14", description: "Milagro Tequila, apricot brandy, zesty orange juice, orgeat, lime." },
+        { name: "It's a Mad Mad Mad Mad Mango", price: "14", description: "Ghost Tequila, house mango mix, jalapeños." },
+        { name: "Pina Sangria", price: "12", description: "White wine, coconut rum, pineapple, toasted coconut syrup, cream of coconut, lime." },
+        { name: "Chat G&T", price: "13", description: "Choose one of our three signature gins (Tanqueray, Roku, Hendrick's) paired with a premium Fever-Tree tonic (Indian, Elderflower, or Sparkling Lime Yuzu)." },
       ],
     },
     {
-      name: "Spirit-Free",
+      name: "Low Profile",
       items: [
-        { name: "Garden N/A", price: "9", description: "Snap pea cordial, lime, soda, mint." },
-        { name: "Smoked Honey Soda", price: "9", description: "Lapsang tea, honey, lemon, soda." },
+        { name: "Whole Lotta Red", price: "10", description: "Aperol, spiced hibiscus syrup, lemon, club soda." },
+        { name: "Par For The Green", price: "11", description: "Parsley vodka, St. Germain, ginger ale, lemon terpene." },
       ],
     },
   ],
@@ -137,6 +199,7 @@ async function main() {
         name: it.name,
         description: it.description ?? null,
         price: it.price ?? null,
+        tags: it.tags ?? [],
         sortOrder: order++,
       })),
     );
