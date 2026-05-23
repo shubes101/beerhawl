@@ -38,3 +38,9 @@ model Event {
 
   @@index([date])
 }
+
+// Simple key/value flags (e.g. "specials_enabled" = "true"/"false").
+model Setting {
+  key   String @id
+  value String
+}
