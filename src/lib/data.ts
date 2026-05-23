@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { MenuType } from "@/lib/restaurant";
+import { MENU_TYPES, MenuType } from "@/lib/restaurant";
 
 export type MenuSection = {
   title: string | null;
@@ -38,6 +38,18 @@ export async function getMenu(menuType: MenuType): Promise<MenuSection[]> {
   }
 
   return sections;
+}
+
+/** All menus, keyed by type, each grouped into sections. */
+export async function getAllMenus(): Promise<Record<MenuType, MenuSection[]>> {
+  const entries = await Promise.all(
+    MENU_TYPES.map(async (type) => [type, await getMenu(type)] as const),
+  );
+  return Object.fromEntries(entries) as Record<MenuType, MenuSection[]>;
+}
+
+export function menuItemCount(sections: MenuSection[]): number {
+  return sections.reduce((n, s) => n + s.items.length, 0);
 }
 
 /** Start of today in the server's local time, used to filter past events. */

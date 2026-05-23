@@ -8,28 +8,30 @@ export function BeerMenu() {
       <iframe
         src={embedUrl}
         title="Bierhaul beer menu on Untappd"
-        className="h-[820px] w-full rounded-lg border border-bark/60 bg-white"
+        className="bh-ontap-embed"
         loading="lazy"
       />
     );
   }
 
   return (
-    <div className="rounded-lg border border-dashed border-bark/70 bg-espresso/40 p-8">
-      <p className="eyebrow">Powered by Untappd</p>
-      <h3 className="mt-2 font-display text-2xl text-cream">Our draft list is pouring soon</h3>
-      <p className="mt-3 max-w-xl text-sm leading-relaxed text-parchment/80">
-        We keep our taps current on Untappd. The live list will appear here once
-        our Untappd for Business menu is connected. In the meantime, see what&apos;s
-        on now:
+    <div className="bh-ontap-card">
+      <div className="bh-eyebrow">Powered by Untappd</div>
+      <h3 className="bh-ontap-card__h">Twenty-four lines, pouring soon here</h3>
+      <p>
+        We keep our taps current on Untappd. The live list lands here once our Untappd
+        for Business menu is connected — until then, see what&apos;s flowing right now:
       </p>
       <a
+        className="bh-btn bh-btn--primary"
         href={UNTAPPD_VENUE_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-6 inline-block rounded-md bg-amber px-5 py-2.5 text-sm font-semibold uppercase tracking-widest text-ink transition-colors hover:bg-gold"
       >
-        View on Untappd →
+        View on Untappd
+        <svg className="bh-btn__arrow" width="14" height="10" viewBox="0 0 14 10" aria-hidden="true">
+          <path d="M1 5h11M8 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </a>
     </div>
   );

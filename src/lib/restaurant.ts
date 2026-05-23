@@ -1,18 +1,21 @@
 export const restaurant = {
   name: "Bierhaul",
-  tagline: "A modern beer hall in Thornton",
+  tagline: "Pull up a bench.",
   city: "Thornton, PA",
-  address: "Thornton, Pennsylvania 19373",
-  phone: "(610) 555-0142",
+  established: "2023",
+  address: ["341 Thornton Rd", "Thornton, PA 19373"],
+  phone: "610.550.3440",
   email: "hello@bierhaul.com",
   about:
-    "Bierhaul is a neighborhood beer hall serving wood-fired plates, a deep draft list, and seasonal cocktails. Long tables, warm light, and good company — pull up a bench.",
+    "A modern farmhouse beer hall in the rolling country west of Philly. Twenty-four taps, a thoughtful menu, and long communal tables built for slowing down.",
   hours: [
-    { days: "Mon – Tue", time: "Closed" },
-    { days: "Wed – Thu", time: "4:00 PM – 10:00 PM" },
-    { days: "Fri", time: "4:00 PM – 12:00 AM" },
-    { days: "Sat", time: "11:00 AM – 12:00 AM" },
-    { days: "Sun", time: "11:00 AM – 9:00 PM" },
+    { day: "Monday", time: "Closed" },
+    { day: "Tuesday", time: "12:00 PM – 11:00 PM" },
+    { day: "Wednesday", time: "12:00 PM – 11:00 PM" },
+    { day: "Thursday", time: "12:00 PM – 12:00 AM" },
+    { day: "Friday", time: "12:00 PM – 12:00 AM" },
+    { day: "Saturday", time: "12:00 PM – 12:00 AM" },
+    { day: "Sunday", time: "12:00 PM – 9:00 PM" },
   ],
 } as const;
 
@@ -27,10 +30,10 @@ export const MENU_LABELS: Record<MenuType, string> = {
 };
 
 export const MENU_BLURBS: Record<MenuType, string> = {
-  lunch: "Midday plates and sandwiches.",
-  dinner: "Wood-fired mains and shareable starters.",
-  cocktail: "Seasonal cocktails and what's on draft.",
-  specials: "Rotating features — here this week only.",
+  lunch: "Served Tuesday through Saturday, noon to four.",
+  dinner: "From four until close. Family-style portions on request.",
+  cocktail: "House menu changes seasonally. Spirit-free options too.",
+  specials: "Tonight only. When they're gone, they're gone.",
 };
 
 export function isMenuType(value: string): value is MenuType {
