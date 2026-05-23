@@ -372,6 +372,22 @@ body {
 .bh-mi__price { font-family: var(--font-display); font-size: 1.05rem; color: var(--gold); font-weight: 500; flex-shrink: 0; }
 .bh-mi__desc { color: var(--text-3); font-size: 0.9rem; max-width: 38rem; line-height: 1.5; }
 
+.bh-tag {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  border: 1px solid color-mix(in oklab, var(--amber) 45%, var(--border));
+  border-radius: 3px;
+  padding: 0.08rem 0.32rem;
+  vertical-align: middle;
+}
+.bh-mi__name .bh-tag { margin-left: 0.45rem; }
+.bh-menu-legend { margin-top: 0.5rem; font-size: 0.78rem; letter-spacing: 0.04em; color: var(--text-3); }
+
 .bh-untappd-link { display: inline-flex; align-items: center; font-size: 0.85rem; color: var(--amber); letter-spacing: 0.04em; border-bottom: 1px solid transparent; transition: border-color 160ms; }
 .bh-untappd-link:hover { border-color: var(--amber); }
 

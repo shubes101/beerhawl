@@ -19,6 +19,7 @@ model MenuItem {
   name        String
   description String?
   price       String? // free-form so "$14", "14", or "Market" all work
+  tags        String[] @default([]) // dietary: "veg" | "vgn" | "gf" | "gfo"
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
