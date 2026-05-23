@@ -1,0 +1,38 @@
+// Local dev uses SQLite for zero-config setup. For production on serverless
+// (e.g. Vercel), change provider to "postgresql" and point DATABASE_URL at a
+// hosted Postgres instance — the models below are provider-agnostic.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  menuType    String // "lunch" | "dinner" | "cocktail" | "specials"
+  section     String? // e.g. "Starters", "Mains", "Drafts"
+  name        String
+  description String?
+  price       String? // free-form so "$14", "14", or "Market" all work
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([menuType, sortOrder])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime // stored at 12:00 UTC for the calendar day
+  timeLabel   String? // free-form, e.g. "7:00 PM" or "6–9 PM"
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+}
