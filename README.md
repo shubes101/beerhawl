@@ -1,6 +1,6 @@
 # Bierhaul
 
-Website for **Bierhaul**, a beer hall in Thornton, PA — plus a Telegram agent that
+Website for **Bierhaul** in Thornton, PA — plus a Telegram agent that
 lets staff update the site by messaging it. Send the bot a photo of a menu and it
 reads the items with Claude's vision and publishes them; send it a note like
 "add live jazz next Friday at 8pm" and it updates the events page.

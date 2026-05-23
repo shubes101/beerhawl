@@ -7,7 +7,7 @@ export const restaurant = {
   phone: "610.550.3440",
   email: "hello@bierhaul.com",
   about:
-    "A modern farmhouse beer hall in the rolling country west of Philly. Twenty-four taps, a thoughtful menu, and long communal tables built for slowing down.",
+    "A modern farmhouse Bierhaul in the rolling country west of Philly. Twenty-four taps, a thoughtful menu, and long communal tables built for slowing down.",
   hours: [
     { day: "Monday", time: "Closed" },
     { day: "Tuesday", time: "12:00 PM – 11:00 PM" },

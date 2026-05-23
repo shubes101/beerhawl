@@ -1,6 +1,6 @@
 /* bierhaul.css — design system ported from the Claude Design handoff.
    Two modes via [data-mode] on <html>:
-   - "tavern" (default): dark, candle-lit beer hall.
+   - "tavern" (default): dark and candle-lit.
    - "daybreak": cream surfaces + farmhouse green/mustard accents.
    The prototype's iOS-frame ".bh-viewport--mobile" rules are reworked here as
    real responsive @media queries. */
