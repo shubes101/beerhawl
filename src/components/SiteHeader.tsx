@@ -10,6 +10,7 @@ const NAV = [
   { label: "Menus", href: "/menus" },
   { label: "Events", href: "/events" },
   { label: "Leaderboard", href: "/leaderboard" },
+  { label: "Contact", href: "/contact" },
 ];
 
 function isActive(pathname: string, href: string) {

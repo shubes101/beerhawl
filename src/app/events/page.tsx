@@ -1,7 +1,6 @@
 import { Button, Eyebrow, ImageSlot } from "@/components/bh";
 import { EventCard } from "@/components/EventCard";
 import { getUpcomingEvents } from "@/lib/data";
-import { restaurant } from "@/lib/restaurant";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +47,7 @@ export default async function EventsPage() {
           <Eyebrow>Hosting something?</Eyebrow>
           <div className="bh-events__cta__h">Private parties, big or small.</div>
           <p>The Attic seats forty. The Long Table seats twelve. Email us and we&apos;ll figure out the rest.</p>
-          <Button variant="primary" href={`mailto:${restaurant.email}`}>
+          <Button variant="primary" href="/contact">
             Get in touch
           </Button>
         </div>
