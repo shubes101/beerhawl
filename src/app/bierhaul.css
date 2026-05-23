@@ -502,6 +502,29 @@ body {
 .bh-form .bh-btn { align-self: flex-start; }
 .bh-form__note { font-size: 0.85rem; color: var(--text-3); }
 
+/* Human verification (mock placeholder) */
+.bh-verify {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  align-self: flex-start;
+  padding: 0.85rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+.bh-verify__box { width: 20px; height: 20px; accent-color: var(--amber); cursor: pointer; }
+.bh-verify__label { font-size: 0.95rem; color: var(--text-2); cursor: pointer; }
+.bh-verify__brand {
+  margin-left: 1.75rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.bh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.bh-btn--primary:disabled:hover { background: var(--amber); }
+
 @media (max-width: 760px) {
   .bh-contact-grid { grid-template-columns: 1fr; gap: 2rem; }
 }
