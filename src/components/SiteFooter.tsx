@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Socials } from "@/components/bh";
 import { restaurant } from "@/lib/restaurant";
 
 export function SiteFooter() {
@@ -10,6 +12,7 @@ export function SiteFooter() {
           <div className="bh-footer__mark">{restaurant.name}</div>
           <div className="bh-footer__tag">{restaurant.tagline}</div>
           <div className="bh-footer__small">A modern farmhouse Bierhaul.</div>
+          <Socials />
         </div>
 
         <div className="bh-footer__col">
@@ -18,7 +21,16 @@ export function SiteFooter() {
             <div key={line}>{line}</div>
           ))}
           <div style={{ marginTop: "0.4em" }}>{restaurant.phone}</div>
-          <div>{restaurant.email}</div>
+          <div>
+            <a className="bh-untappd-link" href={`mailto:${restaurant.email}`}>
+              {restaurant.email}
+            </a>
+          </div>
+          <div style={{ marginTop: "0.4em" }}>
+            <Link className="bh-untappd-link" href="/contact">
+              Contact us →
+            </Link>
+          </div>
         </div>
 
         <div className="bh-footer__col">

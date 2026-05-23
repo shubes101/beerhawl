@@ -6,6 +6,10 @@ export const restaurant = {
   address: ["341 Thornton Rd", "Thornton, PA 19373"],
   phone: "610.550.3440",
   email: "hello@bierhaul.com",
+  social: {
+    instagram: "https://www.instagram.com/bierhaul",
+    facebook: "https://www.facebook.com/Bierhaul/",
+  },
   about:
     "A modern farmhouse Bierhaul in the rolling country west of Philly. Twenty-four taps, a thoughtful menu, and long communal tables built for slowing down.",
   hours: [
