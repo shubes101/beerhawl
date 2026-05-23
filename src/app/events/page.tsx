@@ -1,5 +1,7 @@
-import { getUpcomingEvents } from "@/lib/data";
+import { Button, Eyebrow, ImageSlot } from "@/components/bh";
 import { EventCard } from "@/components/EventCard";
+import { getUpcomingEvents } from "@/lib/data";
+import { restaurant } from "@/lib/restaurant";
 
 export const dynamic = "force-dynamic";
 
@@ -11,25 +13,45 @@ export default async function EventsPage() {
   const events = await getUpcomingEvents();
 
   return (
-    <div className="container-content py-16">
-      <p className="eyebrow">Mark Your Calendar</p>
-      <h1 className="mt-2 text-4xl text-cream sm:text-5xl">Upcoming Events</h1>
+    <div className="bh-page">
+      <div className="bh-pagehead">
+        <div className="bh-eyebrow">What&apos;s On</div>
+        <h1 className="bh-pagehead__title">The calendar</h1>
+        <p className="bh-pagehead__sub">
+          Live music, brewer&apos;s nights, comedy in the attic, and Sunday long tables. No cover
+          unless we say.
+        </p>
+      </div>
 
-      <div className="mt-12 space-y-5">
+      <div className="bh-eventlist">
         {events.length === 0 ? (
-          <p className="text-muted">No events on the calendar right now — check back soon.</p>
+          <p className="bh-blurb">No events on the calendar right now — check back soon.</p>
         ) : (
-          events.map((event) => (
+          events.map((ev) => (
             <EventCard
-              key={event.id}
-              title={event.title}
-              description={event.description}
-              date={event.date}
-              timeLabel={event.timeLabel}
-              location={event.location}
+              key={ev.id}
+              title={ev.title}
+              description={ev.description}
+              date={ev.date}
+              timeLabel={ev.timeLabel}
+              location={ev.location}
             />
           ))
         )}
+      </div>
+
+      <div className="bh-events__cta bh-events__cta--photo">
+        <div className="bh-events__cta__media">
+          <ImageSlot src="/bierhaul/photo-banquet.webp" alt="A private banquet at Bierhaul" />
+        </div>
+        <div className="bh-events__cta__body">
+          <Eyebrow>Hosting something?</Eyebrow>
+          <div className="bh-events__cta__h">Private parties, big or small.</div>
+          <p>The Attic seats forty. The Long Table seats twelve. Email us and we&apos;ll figure out the rest.</p>
+          <Button variant="primary" href={`mailto:${restaurant.email}`}>
+            Get in touch
+          </Button>
+        </div>
       </div>
     </div>
   );

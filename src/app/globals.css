@@ -2,32 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  html {
-    scroll-behavior: smooth;
-  }
-
-  body {
-    @apply bg-ink text-cream font-body antialiased;
-  }
-
-  h1,
-  h2,
-  h3 {
-    @apply font-display;
-  }
-}
-
-@layer components {
-  .container-content {
-    @apply mx-auto w-full max-w-content px-5 sm:px-8;
-  }
-
-  .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-[0.25em] text-amber;
-  }
-
-  .link-underline {
-    @apply relative transition-colors hover:text-gold;
-  }
+::selection {
+  background: var(--amber);
+  color: var(--on-accent);
 }

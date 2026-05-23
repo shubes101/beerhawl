@@ -1,123 +1,182 @@
 import Link from "next/link";
-import { getMenu, getUpcomingEvents } from "@/lib/data";
+import { Arrow, Button, Eyebrow, ImageSlot, SectionHeading } from "@/components/bh";
 import { EventCard } from "@/components/EventCard";
-import { MENU_LABELS, MENU_BLURBS, MENU_TYPES, restaurant } from "@/lib/restaurant";
+import { getAllMenus, getUpcomingEvents, menuItemCount } from "@/lib/data";
+import { MENU_LABELS, MENU_TYPES, restaurant } from "@/lib/restaurant";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
-  const [events, specials] = await Promise.all([
-    getUpcomingEvents(3),
-    getMenu("specials"),
-  ]);
+function priceLabel(p: string) {
+  return /^\$?\d/.test(p) ? `$${p.replace("$", "")}` : p;
+}
 
-  const specialItems = specials.flatMap((s) => s.items).slice(0, 3);
+export default async function HomePage() {
+  const [menus, events] = await Promise.all([getAllMenus(), getUpcomingEvents(2)]);
+  const specials = menus.specials.flatMap((s) => s.items).slice(0, 3);
 
   return (
-    <>
-      {/* Hero */}
-      <section className="border-b border-bark/60 bg-gradient-to-b from-espresso to-ink">
-        <div className="container-content py-24 sm:py-32">
-          <p className="eyebrow">{restaurant.city}</p>
-          <h1 className="mt-4 max-w-3xl text-5xl leading-tight text-cream sm:text-7xl">
-            {restaurant.tagline}
+    <div className="bh-page">
+      {/* HERO */}
+      <section className="bh-hero">
+        <div className="bh-hero__copy">
+          <Eyebrow>
+            {restaurant.city} · Est. {restaurant.established}
+          </Eyebrow>
+          <h1 className="bh-hero__title">
+            A long table,
+            <br />
+            a cold pour,
+            <br />
+            <em>and stay a while.</em>
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-parchment/85">
-            {restaurant.about}
-          </p>
-          <div className="mt-10 flex flex-wrap gap-4">
-            <Link
-              href="/menus"
-              className="rounded-md bg-amber px-6 py-3 text-sm font-semibold uppercase tracking-widest text-ink transition-colors hover:bg-gold"
-            >
+          <p className="bh-hero__about">{restaurant.about}</p>
+          <div className="bh-hero__ctas">
+            <Button variant="primary" href="/menus">
               View Menus
-            </Link>
-            <Link
-              href="/events"
-              className="rounded-md border border-bark px-6 py-3 text-sm font-semibold uppercase tracking-widest text-parchment transition-colors hover:border-amber hover:text-gold"
-            >
+            </Button>
+            <Button variant="secondary" href="/events">
               Upcoming Events
-            </Link>
+            </Button>
           </div>
+          <div className="bh-hero__meta">
+            <span>{restaurant.address[0]}</span>
+            <span aria-hidden="true">·</span>
+            <span>{restaurant.phone}</span>
+            <span aria-hidden="true">·</span>
+            <span>No reservations</span>
+          </div>
+        </div>
+        <div className="bh-hero__media">
+          <ImageSlot src="/bierhaul/photo-bar.webp" alt="The bar at Bierhaul" aspect="4/5" />
+          <div className="bh-hero__badge">
+            <span className="bh-hero__badge__dot" />
+            <b>24</b>
+            <span>on tap</span>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="bh-hero__logo" src="/bierhaul/logo-circle.webp" alt="Bierhaul" />
         </div>
       </section>
 
-      {/* Specials */}
-      {specialItems.length > 0 && (
-        <section className="container-content py-16">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="eyebrow">On Now</p>
-              <h2 className="mt-2 text-3xl text-cream">This Week&apos;s Specials</h2>
-            </div>
-            <Link href="/menus#specials" className="text-sm text-amber link-underline">
-              All specials →
-            </Link>
-          </div>
-          <div className="mt-8 grid gap-6 sm:grid-cols-3">
-            {specialItems.map((item) => (
-              <div key={item.id} className="rounded-lg border border-bark/60 bg-espresso/60 p-6">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="font-display text-xl text-cream">{item.name}</h3>
-                  {item.price && <span className="font-display text-gold">{item.price}</span>}
+      {/* SPECIALS */}
+      {specials.length > 0 && (
+        <section className="bh-section">
+          <SectionHeading
+            eyebrow="This Week"
+            title="Specials"
+            blurb="From the kitchen and the bar — running while they last."
+            trailing={
+              <Button variant="ghost" href="/menus#specials">
+                All specials
+              </Button>
+            }
+          />
+          <div className="bh-grid-3">
+            {specials.map((s, i) => (
+              <article key={s.id} className="bh-card bh-card--special">
+                <div className="bh-card__head">
+                  <div className="bh-card__num">{String(i + 1).padStart(2, "0")}</div>
+                  {s.price && <div className="bh-card__price">{priceLabel(s.price)}</div>}
                 </div>
-                {item.description && (
-                  <p className="mt-2 text-sm leading-relaxed text-parchment/80">
-                    {item.description}
-                  </p>
-                )}
-              </div>
+                <h3 className="bh-card__title">{s.name}</h3>
+                {s.description && <p className="bh-card__desc">{s.description}</p>}
+              </article>
             ))}
           </div>
         </section>
       )}
 
-      {/* Menu links */}
-      <section className="container-content py-16">
-        <p className="eyebrow">The Table</p>
-        <h2 className="mt-2 text-3xl text-cream">Our Menus</h2>
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {MENU_TYPES.map((type) => (
-            <Link
-              key={type}
-              href={`/menus#${type}`}
-              className="group rounded-lg border border-bark/60 bg-espresso/40 p-6 transition-colors hover:border-amber"
-            >
-              <h3 className="font-display text-2xl text-cream group-hover:text-gold">
-                {MENU_LABELS[type]}
-              </h3>
-              <p className="mt-2 text-sm text-muted">{MENU_BLURBS[type]}</p>
-            </Link>
-          ))}
+      {/* THE SPACE */}
+      <section className="bh-section">
+        <SectionHeading
+          eyebrow="The Space"
+          title="A bar, an attic, a long shuffleboard."
+          blurb="Two rooms, a back lot, and a private space upstairs called The Attic."
+        />
+        <div className="bh-space-grid">
+          <figure className="bh-space-fig bh-space-fig--lg">
+            <ImageSlot src="/bierhaul/photo-bar.webp" alt="The bar" />
+            <figcaption>The Bar</figcaption>
+          </figure>
+          <figure className="bh-space-fig">
+            <ImageSlot src="/bierhaul/photo-attic-sign.webp" alt="The Attic sign" />
+            <figcaption>The Attic</figcaption>
+          </figure>
+          <figure className="bh-space-fig">
+            <ImageSlot src="/bierhaul/photo-shuffleboard.webp" alt="Shuffleboard" />
+            <figcaption>The Shuffleboard</figcaption>
+          </figure>
         </div>
       </section>
 
-      {/* Events */}
-      {events.length > 0 && (
-        <section className="container-content py-16">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="eyebrow">Mark Your Calendar</p>
-              <h2 className="mt-2 text-3xl text-cream">Upcoming Events</h2>
-            </div>
-            <Link href="/events" className="text-sm text-amber link-underline">
-              All events →
-            </Link>
+      {/* MENUS */}
+      <section className="bh-section">
+        <SectionHeading
+          eyebrow="Our Kitchen & Bar"
+          title="Menus"
+          blurb="Updated weekly. Texted in from the line."
+        />
+        <div className="bh-menulinks">
+          {MENU_TYPES.map((type, i) => {
+            const sections = menus[type];
+            return (
+              <Link key={type} className="bh-menulink" href={`/menus#${type}`}>
+                <div className="bh-menulink__num">{String(i + 1).padStart(2, "0")}</div>
+                <div className="bh-menulink__body">
+                  <div className="bh-menulink__title">{MENU_LABELS[type]}</div>
+                  <div className="bh-menulink__sub">
+                    {menuItemCount(sections)} items · {sections.length} section
+                    {sections.length === 1 ? "" : "s"}
+                  </div>
+                </div>
+                <Arrow className="bh-menulink__arrow" />
+              </Link>
+            );
+          })}
+        </div>
+        <div className="bh-tap-promo">
+          <div className="bh-tap-promo__l">
+            <Eyebrow>Always Live</Eyebrow>
+            <div className="bh-tap-promo__h">On Tap — what&apos;s pouring right now</div>
+            <p className="bh-tap-promo__sub">
+              Twenty-four lines, pulled from our Untappd venue. Tap list and a live check-in
+              leaderboard, updated through the night.
+            </p>
           </div>
-          <div className="mt-8 grid gap-5 sm:grid-cols-2">
-            {events.map((event) => (
+          <Button variant="primary" href="/menus#tap">
+            See the tap list
+          </Button>
+        </div>
+      </section>
+
+      {/* EVENTS PREVIEW */}
+      {events.length > 0 && (
+        <section className="bh-section">
+          <SectionHeading
+            eyebrow="What's On"
+            title="Upcoming Events"
+            blurb="Live music, brewer's nights, and the occasional pig roast."
+            trailing={
+              <Button variant="ghost" href="/events">
+                All events
+              </Button>
+            }
+          />
+          <div className="bh-grid-2">
+            {events.map((ev) => (
               <EventCard
-                key={event.id}
-                title={event.title}
-                description={event.description}
-                date={event.date}
-                timeLabel={event.timeLabel}
-                location={event.location}
+                key={ev.id}
+                title={ev.title}
+                description={ev.description}
+                date={ev.date}
+                timeLabel={ev.timeLabel}
+                location={ev.location}
+                compact
               />
             ))}
           </div>
         </section>
       )}
-    </>
+    </div>
   );
 }

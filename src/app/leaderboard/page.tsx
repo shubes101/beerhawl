@@ -1,3 +1,4 @@
+import { Eyebrow } from "@/components/bh";
 import {
   getLeaderboards,
   LEADERBOARD_WINDOW_HOURS,
@@ -11,77 +12,100 @@ export const metadata = {
   title: "Leaderboard — Bierhaul",
 };
 
-function Board({
+function LBoard({
+  eyebrow,
   title,
-  subtitle,
-  entries,
+  rows,
 }: {
+  eyebrow: string;
   title: string;
-  subtitle: string;
-  entries: LeaderboardEntry[];
+  rows: LeaderboardEntry[];
 }) {
   return (
-    <div className="rounded-lg border border-bark/60 bg-espresso/60 p-6">
-      <h2 className="font-display text-2xl text-cream">{title}</h2>
-      <p className="mt-0.5 text-sm text-amber">{subtitle}</p>
-      {entries.length === 0 ? (
-        <p className="mt-6 text-sm text-muted">
-          No check-ins in the last {LEADERBOARD_WINDOW_HOURS} hours yet — be the first.
-        </p>
+    <section className="bh-lboard">
+      <div className="bh-lboard__head">
+        <Eyebrow>{eyebrow}</Eyebrow>
+        <h2 className="bh-lboard__title">{title}</h2>
+      </div>
+      {rows.length === 0 ? (
+        <div className="bh-lboard__empty">
+          No check-ins in the last {LEADERBOARD_WINDOW_HOURS} hours yet.
+        </div>
       ) : (
-        <ol className="mt-6 space-y-3">
-          {entries.map((entry, i) => (
-            <li key={`${entry.name}-${i}`} className="flex items-center gap-4">
-              <span className="w-6 shrink-0 font-display text-lg text-gold">{i + 1}</span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-parchment">{entry.name}</p>
-                {entry.subtitle && (
-                  <p className="truncate text-xs text-muted">{entry.subtitle}</p>
-                )}
+        <ol className="bh-lboard__list">
+          {rows.map((row, i) => (
+            <li key={`${row.name}-${i}`} className="bh-lrow">
+              <div className="bh-lrow__rank">{String(i + 1).padStart(2, "0")}</div>
+              <div className="bh-lrow__main">
+                <div className="bh-lrow__name">{row.name}</div>
+                {row.subtitle && <div className="bh-lrow__sub">{row.subtitle}</div>}
               </div>
-              <span className="shrink-0 font-display text-cream">{entry.count}</span>
+              <div className="bh-lrow__count">
+                <span className="bh-lrow__count__n">{row.count}</span>
+                <span className="bh-lrow__count__u">pour{row.count === 1 ? "" : "s"}</span>
+              </div>
             </li>
           ))}
         </ol>
       )}
-    </div>
+    </section>
   );
 }
 
 export default async function LeaderboardPage() {
   const data = await getLeaderboards();
+  const total = data ? data.topUsers.reduce((n, d) => n + d.count, 0) : null;
 
   return (
-    <div className="container-content py-16">
-      <p className="eyebrow">Last {LEADERBOARD_WINDOW_HOURS} Hours</p>
-      <h1 className="mt-2 text-4xl text-cream sm:text-5xl">Leaderboard</h1>
-      <p className="mt-3 max-w-2xl text-parchment/80">
-        Who&apos;s drinking the most and what&apos;s pouring fastest, from live Untappd
-        check-ins at Bierhaul.
-      </p>
+    <div className="bh-page">
+      <div className="bh-pagehead bh-pagehead--lb">
+        <div>
+          <Eyebrow>Last {LEADERBOARD_WINDOW_HOURS} Hours{data ? " · Live" : ""}</Eyebrow>
+          <h1 className="bh-pagehead__title">Leaderboard</h1>
+          <p className="bh-pagehead__sub">
+            Pulled from Untappd check-ins. The board re-sorts as new pours land.
+          </p>
+        </div>
+        <div className="bh-lb-meter">
+          <div className="bh-lb-meter__h">Total Check-ins</div>
+          <div className="bh-lb-meter__big">{total ?? "—"}</div>
+          <div className="bh-lb-meter__sub">
+            {data ? (
+              <>
+                <span className="bh-lb-pulse" /> live
+              </>
+            ) : (
+              "soon"
+            )}
+          </div>
+        </div>
+      </div>
 
-      {!data ? (
-        <div className="mt-12 rounded-lg border border-dashed border-bark/70 bg-espresso/40 p-8">
-          <p className="eyebrow">Powered by Untappd</p>
-          <h2 className="mt-2 font-display text-2xl text-cream">Coming soon</h2>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-parchment/80">
-            Once our Untappd for Business check-in feed is connected, this page will
-            show the top drinkers and the most-popular beers over the last{" "}
-            {LEADERBOARD_WINDOW_HOURS} hours, updating throughout the night.
+      {data ? (
+        <div className="bh-lb-grid">
+          <LBoard eyebrow="The Regulars" title="Top Drinkers" rows={data.topUsers} />
+          <LBoard eyebrow="Pouring Most" title="Most Popular" rows={data.topBeers} />
+        </div>
+      ) : (
+        <div className="bh-lb-cta">
+          <Eyebrow>Powered by Untappd</Eyebrow>
+          <div className="bh-lb-cta__h">Coming soon</div>
+          <p>
+            Once our Untappd for Business check-in feed is connected, this page shows the top
+            drinkers and the most-popular beers over the last {LEADERBOARD_WINDOW_HOURS} hours,
+            updating through the night. Add to the tally by checking in when you visit.
           </p>
           <a
+            className="bh-btn bh-btn--primary"
             href={UNTAPPD_VENUE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-6 inline-block rounded-md bg-amber px-5 py-2.5 text-sm font-semibold uppercase tracking-widest text-ink transition-colors hover:bg-gold"
           >
-            Check in on Untappd →
+            Check in on Untappd
+            <svg className="bh-btn__arrow" width="14" height="10" viewBox="0 0 14 10" aria-hidden="true">
+              <path d="M1 5h11M8 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </a>
-        </div>
-      ) : (
-        <div className="mt-12 grid gap-8 md:grid-cols-2">
-          <Board title="Top Drinkers" subtitle="Most check-ins" entries={data.topUsers} />
-          <Board title="Most Popular" subtitle="Most-checked-in beers" entries={data.topBeers} />
         </div>
       )}
     </div>
