@@ -3,6 +3,7 @@ import "./globals.css";
 import "./bierhaul.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { SwipeNav } from "@/components/SwipeNav";
 import { restaurant } from "@/lib/restaurant";
 
 export const metadata: Metadata = {
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SiteHeader />
         <main className="bh-main">{children}</main>
         <SiteFooter />
+        <SwipeNav />
       </body>
     </html>
   );
