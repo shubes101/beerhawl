@@ -30,7 +30,7 @@ this brief points Claude at the live sources to extract them.
 
 ## 1. Product overview
 
-**What it is:** the public website for **Bierhaul**, a modern farmhouse beer hall
+**What it is:** the public website for **Bierhaul**, a modern farmhouse Bierhaul
 in **Thornton, PA**, plus a back-office content agent that lets staff update the
 site by texting a Telegram bot (including photos of printed menus).
 
@@ -39,7 +39,7 @@ checking events and the tap list.
 
 **Goals:**
 - Make the menus, events, and tap list effortless to browse on a phone.
-- Feel warm, communal, and craft-forward — a real beer hall, not a generic
+- Feel warm, communal, and craft-forward — the real Bierhaul, not a generic
   template.
 - Let non-technical staff keep it current with zero CMS training (via Telegram).
 
@@ -162,7 +162,7 @@ Design these as a system (with hover/empty states where relevant):
 | Deep accent | `copper` | `#9a512c` |
 | Muted text / labels | `muted` | `#867a6c` |
 
-Overall feel: dark, warm, candle-lit beer hall; amber/gold as the spark.
+Overall feel: dark, warm, candle-lit; amber/gold as the spark.
 
 **Typography:**
 - Display/headings: serif — currently `Georgia, "Iowan Old Style", "Times New
