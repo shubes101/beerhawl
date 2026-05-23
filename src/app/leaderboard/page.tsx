@@ -1,10 +1,6 @@
 import { Eyebrow } from "@/components/bh";
-import {
-  getLeaderboards,
-  LEADERBOARD_WINDOW_HOURS,
-  type LeaderboardEntry,
-  UNTAPPD_VENUE_URL,
-} from "@/lib/untappd";
+import { MockLeaderboard } from "@/components/MockLeaderboard";
+import { getLeaderboards, LEADERBOARD_WINDOW_HOURS, type LeaderboardEntry } from "@/lib/untappd";
 
 export const dynamic = "force-dynamic";
 
@@ -54,13 +50,19 @@ function LBoard({
 
 export default async function LeaderboardPage() {
   const data = await getLeaderboards();
-  const total = data ? data.topUsers.reduce((n, d) => n + d.count, 0) : null;
+
+  // Until the Untappd check-in API is connected, show the animated mock board.
+  if (!data) {
+    return <MockLeaderboard windowHours={LEADERBOARD_WINDOW_HOURS} />;
+  }
+
+  const total = data.topUsers.reduce((n, d) => n + d.count, 0);
 
   return (
     <div className="bh-page">
       <div className="bh-pagehead bh-pagehead--lb">
         <div>
-          <Eyebrow>Last {LEADERBOARD_WINDOW_HOURS} Hours{data ? " · Live" : ""}</Eyebrow>
+          <Eyebrow>Last {LEADERBOARD_WINDOW_HOURS} Hours · Live</Eyebrow>
           <h1 className="bh-pagehead__title">Leaderboard</h1>
           <p className="bh-pagehead__sub">
             Pulled from Untappd check-ins. The board re-sorts as new pours land.
@@ -68,46 +70,17 @@ export default async function LeaderboardPage() {
         </div>
         <div className="bh-lb-meter">
           <div className="bh-lb-meter__h">Total Check-ins</div>
-          <div className="bh-lb-meter__big">{total ?? "—"}</div>
+          <div className="bh-lb-meter__big">{total}</div>
           <div className="bh-lb-meter__sub">
-            {data ? (
-              <>
-                <span className="bh-lb-pulse" /> live
-              </>
-            ) : (
-              "soon"
-            )}
+            <span className="bh-lb-pulse" /> live
           </div>
         </div>
       </div>
 
-      {data ? (
-        <div className="bh-lb-grid">
-          <LBoard eyebrow="The Regulars" title="Top Drinkers" rows={data.topUsers} />
-          <LBoard eyebrow="Pouring Most" title="Most Popular" rows={data.topBeers} />
-        </div>
-      ) : (
-        <div className="bh-lb-cta">
-          <Eyebrow>Powered by Untappd</Eyebrow>
-          <div className="bh-lb-cta__h">Coming soon</div>
-          <p>
-            Once our Untappd for Business check-in feed is connected, this page shows the top
-            drinkers and the most-popular beers over the last {LEADERBOARD_WINDOW_HOURS} hours,
-            updating through the night. Add to the tally by checking in when you visit.
-          </p>
-          <a
-            className="bh-btn bh-btn--primary"
-            href={UNTAPPD_VENUE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Check in on Untappd
-            <svg className="bh-btn__arrow" width="14" height="10" viewBox="0 0 14 10" aria-hidden="true">
-              <path d="M1 5h11M8 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </a>
-        </div>
-      )}
+      <div className="bh-lb-grid">
+        <LBoard eyebrow="The Regulars" title="Top Patrons" rows={data.topUsers} />
+        <LBoard eyebrow="Pouring Most" title="Most Popular" rows={data.topBeers} />
+      </div>
     </div>
   );
 }
