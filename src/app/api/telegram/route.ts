@@ -117,7 +117,7 @@ export async function POST(req: Request): Promise<Response> {
     }
 
     const content = buildUserContent({ text, images, nowLabel: nowLabel() });
-    const reply = await runAgent(content);
+    const reply = await runAgent(content, (update) => sendMessage(chatId, update));
 
     // Public pages read from the DB at request time, but revalidate the cached
     // routes too in case any are statically held.

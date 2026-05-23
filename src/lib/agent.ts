@@ -299,12 +299,13 @@ You can manage:
 - Whether the Specials menu is shown or hidden on the site.
 
 How to work:
+- ALWAYS act in the same response: when you decide to make a change, call the matching tool immediately. Never reply that you'll do something and then stop without calling a tool.
 - To hide or show the Specials menu, use set_specials_enabled — turn it off when there are no specials, on when they return. If you add specials items while it's hidden, turn it back on so they show.
-- When sent a PHOTO of a menu, read every item, price, and section from the image and call replace_menu for the matching menu. If it is not clear which menu the photo is (lunch, dinner, cocktail, or specials), ask before changing anything.
+- When sent a PHOTO of a menu, read every item, price, and section from the image and call replace_menu for the matching menu in this same response — extract everything and call the tool, do not just describe what you see. If it is genuinely unclear which menu the photo is (lunch, dinner, cocktail, or specials), ask before changing anything.
 - For natural-language requests ("add taco night next Thursday at 6", "drop the schnitzel from dinner", "86 the garden gimlet"), use the appropriate tools. To remove something, list first to get its id, then remove by id.
 - Resolve relative dates using the current date given in the message.
 - Read prices and item names exactly as written; don't invent items, descriptions, or prices. If something in a photo is unreadable, make your best guess and mention the uncertainty in your reply.
-- After you finish, reply with one short, friendly confirmation of exactly what you changed. Keep it to a sentence or two — no preamble, no markdown.`,
+- A separate system already posts a "captured" readout and a "saved" confirmation for each change, so your final reply should be one short, friendly line — and call out anything you were unsure about (e.g. an item or price you couldn't read clearly). No preamble, no markdown.`,
     cache_control: { type: "ephemeral" },
   },
 ];
@@ -346,8 +347,75 @@ function textFromResponse(message: Anthropic.Message): string {
     .trim();
 }
 
+export type ProgressFn = (text: string) => Promise<void> | void;
+
+type ToolInput = Record<string, unknown>;
+
+// A "what I captured" message sent BEFORE the DB write (esp. for photo OCR).
+function progressBefore(name: string, input: ToolInput): string | null {
+  if (name === "replace_menu") {
+    const menu = String(input.menu_type ?? "menu");
+    const items = Array.isArray(input.items) ? (input.items as ToolInput[]) : [];
+    const lines = items.slice(0, 60).map((it) => {
+      const price =
+        it.price !== undefined && it.price !== null && String(it.price).trim()
+          ? ` — ${String(it.price)}`
+          : "";
+      return `• ${String(it.name ?? "").trim()}${price}`;
+    });
+    return `📋 Read the ${menu} menu — captured ${items.length} item${
+      items.length === 1 ? "" : "s"
+    }:\n${lines.join("\n")}`;
+  }
+  if (name === "add_menu_item") {
+    return `➕ Adding "${String(input.name ?? "").trim()}" to the ${String(
+      input.menu_type ?? "menu",
+    )} menu…`;
+  }
+  if (name === "add_event") {
+    const when = input.date ? ` on ${String(input.date)}` : "";
+    return `📅 Adding event "${String(input.title ?? "").trim()}"${when}…`;
+  }
+  return null;
+}
+
+// A confirmation sent AFTER the DB write commits (or an error if it failed).
+function progressAfter(name: string, input: ToolInput, result: ToolOutput): string | null {
+  if (result.isError) {
+    let reason = "something went wrong";
+    try {
+      reason = (JSON.parse(result.content) as { error?: string }).error ?? reason;
+    } catch {
+      /* keep default */
+    }
+    return `⚠️ Couldn't complete that: ${reason}`;
+  }
+  switch (name) {
+    case "replace_menu": {
+      const menu = String(input.menu_type ?? "menu");
+      const n = Array.isArray(input.items) ? input.items.length : 0;
+      return `✅ Saved the ${menu} menu to the site (${n} item${n === 1 ? "" : "s"}).`;
+    }
+    case "add_menu_item":
+      return `✅ Added "${String(input.name ?? "").trim()}" — it's live on the site.`;
+    case "remove_menu_item":
+      return "✅ Removed that item from the site.";
+    case "add_event":
+      return `✅ Event "${String(input.title ?? "").trim()}" is live on the events page.`;
+    case "remove_event":
+      return "✅ Removed that event.";
+    case "set_specials_enabled":
+      return `✅ Specials are now ${input.enabled ? "showing" : "hidden"} on the site.`;
+    default:
+      return null; // list_menu / list_events are read-only
+  }
+}
+
 /** Runs the tool-using agent to completion and returns its reply text. */
-export async function runAgent(userContent: Anthropic.ContentBlockParam[]): Promise<string> {
+export async function runAgent(
+  userContent: Anthropic.ContentBlockParam[],
+  onProgress?: ProgressFn,
+): Promise<string> {
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: userContent }];
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
@@ -368,7 +436,16 @@ export async function runAgent(userContent: Anthropic.ContentBlockParam[]): Prom
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
     for (const block of response.content) {
       if (block.type === "tool_use") {
+        const input = (block.input ?? {}) as ToolInput;
+        if (onProgress) {
+          const pre = progressBefore(block.name, input);
+          if (pre) await onProgress(pre);
+        }
         const result = await executeTool(block.name, block.input);
+        if (onProgress) {
+          const post = progressAfter(block.name, input, result);
+          if (post) await onProgress(post);
+        }
         toolResults.push({
           type: "tool_result",
           tool_use_id: block.id,
