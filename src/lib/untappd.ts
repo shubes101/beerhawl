@@ -26,7 +26,7 @@ export function isCheckinApiConfigured(): boolean {
   return Boolean(API_TOKEN && LOCATION_ID);
 }
 
-export type LeaderboardEntry = { name: string; count: number };
+export type LeaderboardEntry = { name: string; subtitle?: string; count: number };
 export type Leaderboards = {
   windowHours: number;
   topUsers: LeaderboardEntry[];
@@ -39,12 +39,14 @@ export type Leaderboards = {
  *
  * TODO — implement once UTFB Premium is available:
  *   1. Add a `Checkin` model to prisma/schema.prisma
- *      (checkinId @unique, username, beerName, breweryName, createdAt) + db push.
+ *      (checkinId @unique, firstName, username, beerName, breweryName, createdAt) + db push.
  *   2. Add a poller (Vercel Cron on Pro, or an external trigger) that calls
  *      GET https://business.untappd.com/api/v1/locations/{LOCATION_ID}/checkins
  *      with `Authorization: <UNTAPPD_API_TOKEN>`, dedupes by checkinId, stores rows.
- *   3. Implement below: select check-ins where createdAt >= now - window,
- *      group by user and by beer, count, sort desc, take top N.
+ *   3. Implement below: select check-ins where createdAt >= now - window, then
+ *      - topUsers: group by user → { name: firstName, subtitle: "@" + username, count }
+ *      - topBeers: group by beer → { name: beerName, subtitle: breweryName, count }
+ *      sorted desc, take top N.
  */
 export async function getLeaderboards(): Promise<Leaderboards | null> {
   if (!isCheckinApiConfigured()) return null;

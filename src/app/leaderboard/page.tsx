@@ -31,9 +31,14 @@ function Board({
       ) : (
         <ol className="mt-6 space-y-3">
           {entries.map((entry, i) => (
-            <li key={`${entry.name}-${i}`} className="flex items-baseline gap-4">
+            <li key={`${entry.name}-${i}`} className="flex items-center gap-4">
               <span className="w-6 shrink-0 font-display text-lg text-gold">{i + 1}</span>
-              <span className="min-w-0 flex-1 truncate text-parchment">{entry.name}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-parchment">{entry.name}</p>
+                {entry.subtitle && (
+                  <p className="truncate text-xs text-muted">{entry.subtitle}</p>
+                )}
+              </div>
               <span className="shrink-0 font-display text-cream">{entry.count}</span>
             </li>
           ))}

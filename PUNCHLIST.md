@@ -17,8 +17,8 @@ render tasteful "coming soon" placeholders (On Tap section on `/menus`, and the
 - [ ] Note your **location ID** in UTFB (not the public venue id `11290340`) → set `UNTAPPD_LOCATION_ID`.
 - [ ] Decide beer-menu style: keep the **Untappd embed** (fast, Untappd-styled) or
       have us render it **native** to match the site theme.
-- [ ] Decide leaderboard name display: full Untappd usernames vs **first name +
-      last initial** (recommended for a public page).
+- [x] Leaderboard name display: **first name** as the main line, **@username** as
+      the subtitle. _(Decided.)_
 
 Once the env vars are set, ping me and I'll: add the `Checkin` table, build the
 check-in poller, and implement the live leaderboard (top drinkers + most-popular
