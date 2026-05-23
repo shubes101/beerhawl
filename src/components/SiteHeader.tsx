@@ -5,6 +5,7 @@ const nav = [
   { href: "/", label: "Home" },
   { href: "/menus", label: "Menus" },
   { href: "/events", label: "Events" },
+  { href: "/leaderboard", label: "Leaderboard" },
 ];
 
 export function SiteHeader() {
