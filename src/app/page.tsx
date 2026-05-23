@@ -90,8 +90,8 @@ export default async function HomePage() {
       <section className="bh-section">
         <SectionHeading
           eyebrow="The Space"
-          title="A bar, an attic, a long shuffleboard."
-          blurb="Two rooms, a back lot, and a private space upstairs called The Attic."
+          title="A bar, an attic, a good time."
+          blurb="Biergarten, a beautiful rustic bar, a quiet dining room, an event space, and even rooms to stay."
         />
         <div className="bh-space-grid">
           <figure className="bh-space-fig bh-space-fig--lg">
