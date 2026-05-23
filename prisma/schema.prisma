@@ -1,13 +1,14 @@
-// Local dev uses SQLite for zero-config setup. For production on serverless
-// (e.g. Vercel), change provider to "postgresql" and point DATABASE_URL at a
-// hosted Postgres instance — the models below are provider-agnostic.
+// Postgres (Neon) for both local dev and production. DATABASE_URL is the pooled
+// connection (host contains "-pooler") used by the app at runtime; DIRECT_URL is
+// the direct connection used by `prisma db push` / migrations.
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model MenuItem {

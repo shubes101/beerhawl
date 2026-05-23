@@ -11,7 +11,7 @@ reads the items with Claude's vision and publishes them; send it a note like
   at `/api/telegram`.
 - **Claude (`claude-opus-4-7`)** — one model does both the menu-photo OCR and the
   natural-language → structured-update parsing, via tool use.
-- **Prisma + SQLite** for local dev (swap to Postgres for production — see below).
+- **Prisma + Postgres (Neon)** for menus/events storage.
 - **Telegram Bot API** for the messaging interface.
 
 ## How it works
@@ -45,13 +45,14 @@ appear immediately.
    cp .env.example .env
    ```
 
-   At minimum set `ANTHROPIC_API_KEY`. For the bot you'll also need
-   `TELEGRAM_BOT_TOKEN` (from [@BotFather](https://t.me/BotFather)).
+   Set `DATABASE_URL` + `DIRECT_URL` to a Postgres (a [Neon](https://neon.tech)
+   project — a free dev branch works for local). Set `ANTHROPIC_API_KEY` and
+   `TELEGRAM_BOT_TOKEN` (from [@BotFather](https://t.me/BotFather)) for the bot.
 
 3. **Create and seed the database:**
 
    ```bash
-   npm run db:push   # creates the SQLite schema
+   npm run db:push   # pushes the schema to Postgres
    npm run db:seed   # loads sample menus + events
    ```
 
@@ -95,15 +96,23 @@ Now send the bot:
 > tunnel (e.g. `ngrok http 3000`), set `PUBLIC_URL` to the tunnel URL, then
 > `npm run telegram:set-webhook`.
 
-## Deploying to production
+## Deploying to Vercel (with Neon Postgres)
 
-This runs well on any Node host. On serverless platforms (e.g. Vercel) the local
-SQLite file isn't writable, so use a hosted Postgres:
-
-1. In `prisma/schema.prisma`, change the datasource provider to `postgresql`.
-2. Set `DATABASE_URL` to your Postgres connection string.
-3. Run `npx prisma db push` (and optionally `npm run db:seed`) against it.
-4. Set all env vars from `.env.example` in your host's dashboard and deploy.
+1. **Provision the database.** Add the **Neon** Postgres integration from the Vercel
+   dashboard (Storage tab), or create a project at [neon.tech](https://neon.tech).
+   You need two connection strings: the **pooled** one (host contains `-pooler`)
+   and the **direct** one.
+2. **Set env vars** in Vercel → Settings → Environment Variables (see `.env.example`):
+   `DATABASE_URL` = pooled, `DIRECT_URL` = direct, plus `ANTHROPIC_API_KEY` and the
+   `TELEGRAM_*` vars for the bot.
+3. **Create the schema** against Neon (once), from your machine with the same env:
+   ```bash
+   npm run db:push && npm run db:seed
+   ```
+4. **Deploy.** `next build` runs `prisma generate` automatically; pages read the DB
+   at request time on the Node runtime.
+5. After the first deploy, set `PUBLIC_URL` to your Vercel URL and run
+   `npm run telegram:set-webhook` to point Telegram at `/api/telegram`.
 
 ## Notes
 
