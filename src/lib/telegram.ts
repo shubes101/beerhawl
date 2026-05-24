@@ -33,6 +33,46 @@ export async function sendMessage(chatId: number | string, text: string): Promis
   await call("sendMessage", { chat_id: chatId, text: safe });
 }
 
+export type InlineButton = { text: string; callback_data: string };
+
+/** Send a message with an inline keyboard; returns the sent message id. */
+export async function sendMessageWithButtons(
+  chatId: number | string,
+  text: string,
+  buttons: InlineButton[][],
+): Promise<number> {
+  const safe = text.length > 4000 ? `${text.slice(0, 3990)}…` : text;
+  const result = await call<{ message_id: number }>("sendMessage", {
+    chat_id: chatId,
+    text: safe,
+    reply_markup: { inline_keyboard: buttons },
+  });
+  return result.message_id;
+}
+
+/** Acknowledge a button tap so Telegram stops the loading spinner. */
+export async function answerCallbackQuery(callbackQueryId: string, text?: string): Promise<void> {
+  try {
+    await call("answerCallbackQuery", { callback_query_id: callbackQueryId, text });
+  } catch {
+    // non-critical
+  }
+}
+
+/** Replace a message's text and drop its inline keyboard (e.g. after publish). */
+export async function editMessageText(
+  chatId: number | string,
+  messageId: number,
+  text: string,
+): Promise<void> {
+  const safe = text.length > 4000 ? `${text.slice(0, 3990)}…` : text;
+  try {
+    await call("editMessageText", { chat_id: chatId, message_id: messageId, text: safe });
+  } catch {
+    // non-critical (e.g. message too old to edit)
+  }
+}
+
 export async function sendChatAction(
   chatId: number | string,
   action: "typing" | "upload_photo" = "typing",
