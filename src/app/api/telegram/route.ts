@@ -100,6 +100,20 @@ async function handleCallback(cb: TelegramCallbackQuery): Promise<void> {
 
   await answerCallbackQuery(cb.id);
 
+  // Recall (un-86) tap — carries the item id, no pending menu involved.
+  if (cb.data?.startsWith("rcl:")) {
+    const id = cb.data.slice(4);
+    const existing = await prisma.menuItem.findUnique({ where: { id } });
+    if (!existing) {
+      await editMessageText(chatId, messageId, "That item no longer exists.");
+      return;
+    }
+    await prisma.menuItem.update({ where: { id }, data: { eightySixedAt: null } });
+    revalidatePublicPages();
+    await editMessageText(chatId, messageId, `↩️ Recalled "${existing.name}" — it's back on the menu.`);
+    return;
+  }
+
   const pending = await prisma.pendingMenu.findUnique({ where: { chatId: String(chatId) } });
   if (!pending) {
     await editMessageText(chatId, messageId, "This capture has expired.");
@@ -182,7 +196,7 @@ export async function POST(req: Request): Promise<Response> {
   if (/^\/(start|help)\b/.test(text)) {
     await sendMessage(
       chatId,
-      "Hi! I keep the Bierhaul website up to date.\n\n• Send a photo of a menu (lunch, dinner, cocktails, or specials) — I'll read it and show you what I captured to Publish or Discard.\n• Or just tell me things like \"add live jazz next Friday at 8pm\" or \"remove the schnitzel from dinner\" and I'll apply it.\n\nYour chat ID: " +
+      "Hi! I keep the Bierhaul website up to date.\n\n• Send a photo of a menu (lunch, dinner, cocktails, or specials) — I'll read it and show you what I captured to Publish or Discard.\n• Or just tell me things like \"add live jazz next Friday at 8pm\" or \"86 the garden gimlet\" (marks it sold out — tap Recall, or say \"recall the garden gimlet\", to bring it back).\n\nYour chat ID: " +
         chatId,
     );
     return Response.json({ ok: true });
@@ -208,7 +222,11 @@ export async function POST(req: Request): Promise<Response> {
       : undefined;
 
     const content = buildUserContent({ text, images, nowLabel: nowLabel() });
-    const { reply, proposal } = await runAgent(content, (msg) => sendMessage(chatId, msg), pending);
+    const { reply, proposal, eightySixed } = await runAgent(
+      content,
+      (msg) => sendMessage(chatId, msg),
+      pending,
+    );
 
     if (proposal) {
       // Photo capture staged — show it with Publish/Discard buttons, don't publish yet.
@@ -241,7 +259,15 @@ export async function POST(req: Request): Promise<Response> {
     } else {
       // Immediate text edit — already applied; pages read fresh from the DB.
       revalidatePublicPages();
-      await sendMessage(chatId, reply);
+      if (eightySixed && eightySixed.length > 0) {
+        // Offer a one-tap recall for each item just 86'd.
+        const buttons = eightySixed.map((e) => [
+          { text: `↩️ Recall ${e.name}`, callback_data: `rcl:${e.itemId}` },
+        ]);
+        await sendMessageWithButtons(chatId, reply, buttons);
+      } else {
+        await sendMessage(chatId, reply);
+      }
     }
   } catch (err) {
     console.error("Telegram handler error:", err);

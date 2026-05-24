@@ -16,7 +16,10 @@ export default async function HomePage() {
     getUpcomingEvents(2),
     isSpecialsEnabled(),
   ]);
-  const specials = menus.specials.flatMap((s) => s.items).slice(0, 3);
+  const specials = menus.specials
+    .flatMap((s) => s.items)
+    .filter((it) => !it.soldOut)
+    .slice(0, 3);
   const visibleMenuTypes = MENU_TYPES.filter((t) => t !== "specials" || specialsOn);
 
   return (

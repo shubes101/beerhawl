@@ -386,6 +386,14 @@ body {
   vertical-align: middle;
 }
 .bh-mi__name .bh-tag { margin-left: 0.45rem; }
+
+.bh-mi--sold { opacity: 0.55; }
+.bh-mi--sold .bh-mi__name, .bh-mi--sold .bh-mi__price { text-decoration: line-through; }
+.bh-mi--sold .bh-tag { text-decoration: none; }
+.bh-tag--sold {
+  color: var(--text-3);
+  border-color: color-mix(in oklab, var(--text-3) 45%, var(--border));
+}
 .bh-menu-legend { margin-top: 0.5rem; font-size: 0.78rem; letter-spacing: 0.04em; color: var(--text-3); }
 
 .bh-untappd-link { display: inline-flex; align-items: center; font-size: 0.85rem; color: var(--amber); letter-spacing: 0.04em; border-bottom: 1px solid transparent; transition: border-color 160ms; }
