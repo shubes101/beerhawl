@@ -421,14 +421,14 @@ body {
 
 /* ─── Date chip + Events ─────────────────────────────────────────────────── */
 
-.bh-datechip { width: 5.5rem; height: 5.5rem; flex-shrink: 0; border: 1px solid var(--border); border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--surface); position: relative; overflow: hidden; }
+.bh-datechip { width: 5.5rem; height: 5.5rem; flex-shrink: 0; border: 1px solid var(--border); border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background: var(--surface); position: relative; overflow: hidden; }
 .bh-datechip::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1.3rem; background: var(--amber); }
 .bh-datechip__mon { position: relative; z-index: 1; font-family: var(--font-body); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.22em; color: var(--on-accent); line-height: 1.3rem; height: 1.3rem; align-self: stretch; text-align: center; }
-.bh-datechip__day { font-family: var(--font-display); font-size: 2.4rem; font-weight: 500; line-height: 1; color: var(--text); margin-top: 0.75rem; }
+.bh-datechip__day { font-family: var(--font-display); font-size: 2.4rem; font-weight: 500; line-height: 1; color: var(--text); margin-top: 0.9rem; }
 .bh-datechip--md { width: 4rem; height: 4rem; }
 .bh-datechip--md::before { height: 1rem; }
 .bh-datechip--md .bh-datechip__mon { line-height: 1rem; height: 1rem; font-size: 0.65rem; }
-.bh-datechip--md .bh-datechip__day { font-size: 1.7rem; margin-top: 0.4rem; }
+.bh-datechip--md .bh-datechip__day { font-size: 1.7rem; margin-top: 0.65rem; }
 
 .bh-eventlist { display: flex; flex-direction: column; }
 .bh-event { display: grid; grid-template-columns: auto 1fr auto; gap: 1.5rem; align-items: flex-start; padding: 1.6rem 0; border-bottom: 1px solid var(--border); transition: padding-left 160ms ease, background 160ms ease; }
