@@ -113,7 +113,28 @@ const TOOLS: Anthropic.Tool[] = [
   },
   {
     name: "remove_menu_item",
-    description: "Remove a single menu item by its id. Call list_menu first to find the id.",
+    description:
+      "PERMANENTLY delete a single menu item by its id. Only use when staff explicitly want it gone for good (e.g. \"delete the schnitzel permanently\"). For a temporary sold-out, use eighty_six_item instead. Call list_menu first to find the id.",
+    input_schema: {
+      type: "object",
+      properties: { item_id: { type: "string" } },
+      required: ["item_id"],
+    },
+  },
+  {
+    name: "eighty_six_item",
+    description:
+      "\"86\" a single menu item by its id: mark it temporarily sold out (it stays on the site, struck-through as Sold Out, and is remembered so it can be recalled later). Use for \"86 the garden gimlet\", \"we're out of the wedge\", \"drop the schnitzel for now\". Call list_menu first to find the id.",
+    input_schema: {
+      type: "object",
+      properties: { item_id: { type: "string" } },
+      required: ["item_id"],
+    },
+  },
+  {
+    name: "recall_item",
+    description:
+      "Recall a previously 86'd item by its id: clear its sold-out flag so it shows normally again. Use for \"recall the garden gimlet\", \"the wedge is back\". Call list_menu first to find the id (it flags which items are currently 86'd).",
     input_schema: {
       type: "object",
       properties: { item_id: { type: "string" } },
@@ -304,6 +325,23 @@ async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
         return ok({ removed: { id, name: existing.name } });
       }
 
+      case "eighty_six_item": {
+        const id = String(args.item_id ?? "");
+        const existing = await prisma.menuItem.findUnique({ where: { id } });
+        if (!existing) return fail("No menu item with that id.");
+        if (existing.eightySixedAt) return ok({ already_86ed: true, id, name: existing.name });
+        await prisma.menuItem.update({ where: { id }, data: { eightySixedAt: new Date() } });
+        return ok({ eighty_sixed: { id, name: existing.name } });
+      }
+
+      case "recall_item": {
+        const id = String(args.item_id ?? "");
+        const existing = await prisma.menuItem.findUnique({ where: { id } });
+        if (!existing) return fail("No menu item with that id.");
+        await prisma.menuItem.update({ where: { id }, data: { eightySixedAt: null } });
+        return ok({ recalled: { id, name: existing.name } });
+      }
+
       case "list_menu": {
         const menuType = String(args.menu_type ?? "");
         if (!isMenuType(menuType)) return fail(`Unknown menu_type. Use one of: ${MENU_TYPES.join(", ")}.`);
@@ -320,6 +358,7 @@ async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
             description: i.description,
             price: i.price,
             tags: i.tags,
+            eighty_sixed: i.eightySixedAt !== null,
           })),
         });
       }
@@ -396,7 +435,8 @@ How to work:
 - ALWAYS act in the same response: when you decide to make a change, call the matching tool immediately. Never reply that you'll do something and then stop without calling a tool.
 - PHOTO of a menu → call propose_menu (NOT replace_menu). Read every item, price, section and dietary mark and stage the FULL menu. This does NOT publish — the staff get a "captured" readout with Publish/Discard buttons. Extract everything, don't just describe it. If it's genuinely unclear which menu the photo is (lunch, dinner, cocktail, specials), ask first.
 - If the message note says a menu capture is PENDING and this message corrects it, call propose_menu again with the full corrected menu (re-staging it for review). Do not use replace_menu for photo captures.
-- TEXT requests ("add taco night next Thursday at 6", "drop the schnitzel from dinner", "86 the garden gimlet") are applied immediately with the matching tool (replace_menu, add_menu_item, remove_menu_item, add_event, remove_event, set_specials_enabled). To remove something, list first to get its id, then remove by id.
+- TEXT requests ("add taco night next Thursday at 6", "86 the garden gimlet") are applied immediately with the matching tool (replace_menu, add_menu_item, eighty_six_item, recall_item, remove_menu_item, add_event, remove_event, set_specials_enabled). To act on a single item, call list_menu first to get its id, then call the right tool by id.
+- Taking an item off the menu: "86 X", "we're out of X", "drop X", "X is sold out / unavailable" → eighty_six_item (a TEMPORARY sold-out that's remembered and can be recalled — the item stays listed, struck-through). Bringing it back: "recall X", "X is back", "un-86 X" → recall_item. Use remove_menu_item ONLY when staff are explicit that it should be gone for good ("delete X permanently", "remove X for good"). When unsure between 86 and permanent delete, prefer eighty_six_item since it's reversible. list_menu marks which items are currently 86'd, so use it to pick the right id to recall.
 - To hide or show the Specials menu, use set_specials_enabled — off when there are no specials, on when they return.
 - Resolve relative dates using the current date given in the message.
 - Read prices and item names exactly as written; don't invent items, descriptions, or prices. If something in a photo is unreadable, make your best guess and call it out.
@@ -449,6 +489,7 @@ function hasImage(content: Anthropic.ContentBlockParam[]): boolean {
 
 export type MenuProposal = { menuType: string; items: MenuItemInput[]; summary: string };
 export type PendingProposal = { menuType: string; items: MenuItemInput[] };
+export type EightySixed = { itemId: string; name: string };
 
 export type ProgressFn = (text: string) => Promise<void> | void;
 
@@ -492,6 +533,27 @@ function progressAfter(name: string, input: ToolInput, result: ToolOutput): stri
       return `✅ Added "${String(input.name ?? "").trim()}" — it's live on the site.`;
     case "remove_menu_item":
       return "✅ Removed that item from the site.";
+    case "eighty_six_item": {
+      const data = (() => {
+        try {
+          return JSON.parse(result.content) as { eighty_sixed?: { name?: string }; already_86ed?: boolean; name?: string };
+        } catch {
+          return {} as { eighty_sixed?: { name?: string }; already_86ed?: boolean; name?: string };
+        }
+      })();
+      const name = data.eighty_sixed?.name ?? data.name ?? "that item";
+      if (data.already_86ed) return `🚫 "${name}" was already 86'd.`;
+      return `🚫 86'd "${name}" — marked sold out on the site.`;
+    }
+    case "recall_item": {
+      let name = "that item";
+      try {
+        name = (JSON.parse(result.content) as { recalled?: { name?: string } }).recalled?.name ?? name;
+      } catch {
+        /* keep default */
+      }
+      return `↩️ Recalled "${name}" — it's back on the menu.`;
+    }
     case "add_event":
       return `✅ Event "${String(input.title ?? "").trim()}" is live on the events page.`;
     case "remove_event":
@@ -512,7 +574,7 @@ export async function runAgent(
   userContent: Anthropic.ContentBlockParam[],
   onProgress?: ProgressFn,
   pending?: PendingProposal,
-): Promise<{ reply: string; proposal?: MenuProposal }> {
+): Promise<{ reply: string; proposal?: MenuProposal; eightySixed?: EightySixed[] }> {
   const model = hasImage(userContent) ? VISION_MODEL : TEXT_MODEL;
   console.log(`[agent] model=${model} images=${hasImage(userContent)} pending=${!!pending}`);
 
@@ -528,6 +590,7 @@ export async function runAgent(
 
   const messages: Anthropic.MessageParam[] = [{ role: "user", content: firstContent }];
   let proposal: MenuProposal | undefined;
+  const eightySixed: EightySixed[] = [];
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
     const response = await client().messages.create({
@@ -541,7 +604,7 @@ export async function runAgent(
     messages.push({ role: "assistant", content: response.content });
 
     if (response.stop_reason !== "tool_use") {
-      return { reply: textFromResponse(response) || "Done.", proposal };
+      return { reply: textFromResponse(response) || "Done.", proposal, eightySixed };
     }
 
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
@@ -577,6 +640,16 @@ export async function runAgent(
         if (pre) await onProgress(pre);
       }
       const result = await executeTool(block.name, block.input);
+      if (block.name === "eighty_six_item" && !result.isError) {
+        try {
+          const parsed = JSON.parse(result.content) as { eighty_sixed?: { id: string; name: string } };
+          if (parsed.eighty_sixed) {
+            eightySixed.push({ itemId: parsed.eighty_sixed.id, name: parsed.eighty_sixed.name });
+          }
+        } catch {
+          /* no recall button if we can't parse the id */
+        }
+      }
       if (onProgress) {
         const post = progressAfter(block.name, input, result);
         if (post) await onProgress(post);
@@ -594,5 +667,6 @@ export async function runAgent(
   return {
     reply: "I started on that but ran out of steps — please check the site and try again if needed.",
     proposal,
+    eightySixed,
   };
 }

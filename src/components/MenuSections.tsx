@@ -18,10 +18,11 @@ export function MenuSections({ sections }: { sections: MenuSection[] }) {
           {section.title && <div className="bh-menugroup__h">{section.title}</div>}
           <ul className="bh-menugroup__list">
             {section.items.map((item) => (
-              <li key={item.id} className="bh-mi">
+              <li key={item.id} className={item.soldOut ? "bh-mi bh-mi--sold" : "bh-mi"}>
                 <div className="bh-mi__row">
                   <div className="bh-mi__name">
                     {item.name}
+                    {item.soldOut && <span className="bh-tag bh-tag--sold">Sold Out</span>}
                     {item.tags.map((t) => (
                       <span key={t} className="bh-tag">
                         {TAG_LABEL[t] ?? t.toUpperCase()}
