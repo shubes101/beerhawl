@@ -2,7 +2,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/db";
 import { MENU_TYPES, MenuType, isMenuType, restaurant } from "@/lib/restaurant";
 
-const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-4-7";
+// Per-request model routing: photos (OCR) use the vision-strong model; text-only
+// requests downshift to a cheaper one. ANTHROPIC_MODEL, if set, forces a single
+// model for both (disables routing).
+const FORCED_MODEL = process.env.ANTHROPIC_MODEL;
+const VISION_MODEL = FORCED_MODEL ?? process.env.ANTHROPIC_MODEL_VISION ?? "claude-opus-4-7";
+const TEXT_MODEL = FORCED_MODEL ?? process.env.ANTHROPIC_MODEL_TEXT ?? "claude-sonnet-4-6";
 const MAX_TURNS = 8;
 
 // Constructed lazily so a missing ANTHROPIC_API_KEY only fails at request time,
@@ -42,6 +47,37 @@ const TOOLS: Anthropic.Tool[] = [
                 type: "string",
                 description: "Free-form price as printed, e.g. '14', '$14', or 'Market'.",
               },
+              tags: {
+                type: "array",
+                items: { type: "string", enum: ["veg", "vgn", "gf", "gfo"] },
+                description: "Dietary tags. Map menu marks: (v)→veg, (veg)→vgn, (GF)→gf, (GFO)→gfo.",
+              },
+            },
+            required: ["name"],
+          },
+        },
+      },
+      required: ["menu_type", "items"],
+    },
+  },
+  {
+    name: "propose_menu",
+    description:
+      "Stage a full menu captured from a PHOTO for staff to review before it goes live. Use this — NOT replace_menu — whenever the change comes from a menu photo (or when correcting a still-pending capture). Nothing is published until the user taps Publish. Same fields as replace_menu.",
+    input_schema: {
+      type: "object",
+      properties: {
+        menu_type: { type: "string", enum: [...MENU_TYPES] },
+        items: {
+          type: "array",
+          description: "The full menu in display order.",
+          items: {
+            type: "object",
+            properties: {
+              section: { type: "string", description: "Heading this item sits under, e.g. 'Shareables', 'Sandwiches'." },
+              name: { type: "string" },
+              description: { type: "string" },
+              price: { type: "string", description: "Free-form price as printed, e.g. '14', '$14', or 'Market'." },
               tags: {
                 type: "array",
                 items: { type: "string", enum: ["veg", "vgn", "gf", "gfo"] },
@@ -172,6 +208,60 @@ function cleanTags(v: unknown): string[] {
   return Array.isArray(v) ? v.map(String).filter((t) => ALLOWED_TAGS.includes(t)) : [];
 }
 
+export type MenuItemInput = {
+  section: string | null;
+  name: string;
+  description: string | null;
+  price: string | null;
+  tags: string[];
+};
+
+/** Normalize raw tool/JSON items into the stored shape (drops nameless rows). */
+export function normalizeItems(raw: unknown): MenuItemInput[] {
+  const arr = Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [];
+  return arr
+    .map((it) => ({
+      section: it.section ? String(it.section) : null,
+      name: String(it.name ?? "").trim(),
+      description: it.description ? String(it.description) : null,
+      price: it.price !== undefined && it.price !== null ? String(it.price) : null,
+      tags: cleanTags(it.tags),
+    }))
+    .filter((it) => it.name.length > 0);
+}
+
+/** Replace a whole menu's items. Used by replace_menu (text) and Publish (callback). */
+export async function writeMenu(menuType: string, items: MenuItemInput[]): Promise<number> {
+  if (!isMenuType(menuType)) throw new Error(`Unknown menu type: ${menuType}`);
+  await prisma.$transaction([
+    prisma.menuItem.deleteMany({ where: { menuType } }),
+    prisma.menuItem.createMany({
+      data: items.map((it, i) => ({
+        menuType,
+        section: it.section,
+        name: it.name,
+        description: it.description,
+        price: it.price,
+        tags: it.tags,
+        sortOrder: i,
+      })),
+    }),
+  ]);
+  return items.length;
+}
+
+/** The "captured" readout shown for a menu (photo OCR proposal or replace). */
+export function formatCapture(menuType: string, items: MenuItemInput[]): string {
+  const lines = items.slice(0, 80).map((it) => {
+    const price = it.price && it.price.trim() ? ` — ${it.price}` : "";
+    return `• ${it.name}${price}`;
+  });
+  const more = items.length > 80 ? `\n…and ${items.length - 80} more` : "";
+  return `📋 Read the ${menuType} menu — captured ${items.length} item${
+    items.length === 1 ? "" : "s"
+  }:\n${lines.join("\n")}${more}`;
+}
+
 async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
   const args = (input ?? {}) as Record<string, unknown>;
   try {
@@ -179,23 +269,9 @@ async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
       case "replace_menu": {
         const menuType = String(args.menu_type ?? "");
         if (!isMenuType(menuType)) return fail(`Unknown menu_type. Use one of: ${MENU_TYPES.join(", ")}.`);
-        const items = Array.isArray(args.items) ? (args.items as Record<string, unknown>[]) : [];
+        const items = normalizeItems(args.items);
         if (items.length === 0) return fail("No items provided.");
-
-        await prisma.$transaction([
-          prisma.menuItem.deleteMany({ where: { menuType } }),
-          prisma.menuItem.createMany({
-            data: items.map((it, i) => ({
-              menuType,
-              section: it.section ? String(it.section) : null,
-              name: String(it.name ?? "").trim(),
-              description: it.description ? String(it.description) : null,
-              price: it.price !== undefined && it.price !== null ? String(it.price) : null,
-              tags: cleanTags(it.tags),
-              sortOrder: i,
-            })),
-          }),
-        ]);
+        await writeMenu(menuType, items);
         return ok({ menu_type: menuType, items_set: items.length });
       }
 
@@ -318,13 +394,14 @@ You can manage:
 
 How to work:
 - ALWAYS act in the same response: when you decide to make a change, call the matching tool immediately. Never reply that you'll do something and then stop without calling a tool.
-- To hide or show the Specials menu, use set_specials_enabled — turn it off when there are no specials, on when they return. If you add specials items while it's hidden, turn it back on so they show.
-- When sent a PHOTO of a menu, read every item, price, and section from the image and call replace_menu for the matching menu in this same response — extract everything and call the tool, do not just describe what you see. If it is genuinely unclear which menu the photo is (lunch, dinner, cocktail, or specials), ask before changing anything.
-- For natural-language requests ("add taco night next Thursday at 6", "drop the schnitzel from dinner", "86 the garden gimlet"), use the appropriate tools. To remove something, list first to get its id, then remove by id.
+- PHOTO of a menu → call propose_menu (NOT replace_menu). Read every item, price, section and dietary mark and stage the FULL menu. This does NOT publish — the staff get a "captured" readout with Publish/Discard buttons. Extract everything, don't just describe it. If it's genuinely unclear which menu the photo is (lunch, dinner, cocktail, specials), ask first.
+- If the message note says a menu capture is PENDING and this message corrects it, call propose_menu again with the full corrected menu (re-staging it for review). Do not use replace_menu for photo captures.
+- TEXT requests ("add taco night next Thursday at 6", "drop the schnitzel from dinner", "86 the garden gimlet") are applied immediately with the matching tool (replace_menu, add_menu_item, remove_menu_item, add_event, remove_event, set_specials_enabled). To remove something, list first to get its id, then remove by id.
+- To hide or show the Specials menu, use set_specials_enabled — off when there are no specials, on when they return.
 - Resolve relative dates using the current date given in the message.
-- Read prices and item names exactly as written; don't invent items, descriptions, or prices. If something in a photo is unreadable, make your best guess and mention the uncertainty in your reply.
+- Read prices and item names exactly as written; don't invent items, descriptions, or prices. If something in a photo is unreadable, make your best guess and call it out.
 - Capture dietary marks as each item's tags: (v)→veg, (veg)→vgn, (GF)→gf, (GFO)→gfo.
-- A separate system already posts a "captured" readout and a "saved" confirmation for each change, so your final reply should be one short, friendly line — and call out anything you were unsure about (e.g. an item or price you couldn't read clearly). No preamble, no markdown.`,
+- Final reply: one short, friendly line. For text edits, summarize what you changed and invite corrections ("…— let me know if it needs any fixes."). For a staged photo capture, tell them to review and tap Publish (or send a tweak). No preamble, no markdown.`,
     cache_control: { type: "ephemeral" },
   },
 ];
@@ -366,6 +443,13 @@ function textFromResponse(message: Anthropic.Message): string {
     .trim();
 }
 
+function hasImage(content: Anthropic.ContentBlockParam[]): boolean {
+  return content.some((b) => b.type === "image");
+}
+
+export type MenuProposal = { menuType: string; items: MenuItemInput[]; summary: string };
+export type PendingProposal = { menuType: string; items: MenuItemInput[] };
+
 export type ProgressFn = (text: string) => Promise<void> | void;
 
 type ToolInput = Record<string, unknown>;
@@ -373,18 +457,7 @@ type ToolInput = Record<string, unknown>;
 // A "what I captured" message sent BEFORE the DB write (esp. for photo OCR).
 function progressBefore(name: string, input: ToolInput): string | null {
   if (name === "replace_menu") {
-    const menu = String(input.menu_type ?? "menu");
-    const items = Array.isArray(input.items) ? (input.items as ToolInput[]) : [];
-    const lines = items.slice(0, 60).map((it) => {
-      const price =
-        it.price !== undefined && it.price !== null && String(it.price).trim()
-          ? ` — ${String(it.price)}`
-          : "";
-      return `• ${String(it.name ?? "").trim()}${price}`;
-    });
-    return `📋 Read the ${menu} menu — captured ${items.length} item${
-      items.length === 1 ? "" : "s"
-    }:\n${lines.join("\n")}`;
+    return formatCapture(String(input.menu_type ?? "menu"), normalizeItems(input.items));
   }
   if (name === "add_menu_item") {
     return `➕ Adding "${String(input.name ?? "").trim()}" to the ${String(
@@ -430,16 +503,35 @@ function progressAfter(name: string, input: ToolInput, result: ToolOutput): stri
   }
 }
 
-/** Runs the tool-using agent to completion and returns its reply text. */
+/**
+ * Runs the tool-using agent. Returns the reply text and, if a menu photo was
+ * staged via propose_menu, the proposal for the caller to persist + confirm.
+ * Model is routed per request: photos → vision model, text → cheaper model.
+ */
 export async function runAgent(
   userContent: Anthropic.ContentBlockParam[],
   onProgress?: ProgressFn,
-): Promise<string> {
-  const messages: Anthropic.MessageParam[] = [{ role: "user", content: userContent }];
+  pending?: PendingProposal,
+): Promise<{ reply: string; proposal?: MenuProposal }> {
+  const model = hasImage(userContent) ? VISION_MODEL : TEXT_MODEL;
+  console.log(`[agent] model=${model} images=${hasImage(userContent)} pending=${!!pending}`);
+
+  const firstContent: Anthropic.ContentBlockParam[] = [...userContent];
+  if (pending) {
+    firstContent.unshift({
+      type: "text",
+      text: `NOTE: a ${pending.menuType} menu capture is PENDING review (not yet published). Current pending items: ${JSON.stringify(
+        pending.items,
+      )}. If this message corrects it, call propose_menu again with the full corrected ${pending.menuType} menu. If it's unrelated, handle it normally.`,
+    });
+  }
+
+  const messages: Anthropic.MessageParam[] = [{ role: "user", content: firstContent }];
+  let proposal: MenuProposal | undefined;
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
     const response = await client().messages.create({
-      model: MODEL,
+      model,
       max_tokens: 4096,
       system: SYSTEM,
       tools: TOOLS,
@@ -449,32 +541,58 @@ export async function runAgent(
     messages.push({ role: "assistant", content: response.content });
 
     if (response.stop_reason !== "tool_use") {
-      return textFromResponse(response) || "Done.";
+      return { reply: textFromResponse(response) || "Done.", proposal };
     }
 
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
     for (const block of response.content) {
-      if (block.type === "tool_use") {
-        const input = (block.input ?? {}) as ToolInput;
-        if (onProgress) {
-          const pre = progressBefore(block.name, input);
-          if (pre) await onProgress(pre);
+      if (block.type !== "tool_use") continue;
+
+      // propose_menu stages a capture for review instead of writing to the DB.
+      if (block.name === "propose_menu") {
+        const inp = (block.input ?? {}) as ToolInput;
+        const menuType = String(inp.menu_type ?? "");
+        const items = normalizeItems(inp.items);
+        if (!isMenuType(menuType) || items.length === 0) {
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: block.id,
+            content: JSON.stringify({ error: "Invalid proposal — need a valid menu_type and at least one item." }),
+            is_error: true,
+          });
+        } else {
+          proposal = { menuType, items, summary: formatCapture(menuType, items) };
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: block.id,
+            content: JSON.stringify({ staged: true, menu_type: menuType, count: items.length }),
+          });
         }
-        const result = await executeTool(block.name, block.input);
-        if (onProgress) {
-          const post = progressAfter(block.name, input, result);
-          if (post) await onProgress(post);
-        }
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: block.id,
-          content: result.content,
-          is_error: result.isError,
-        });
+        continue;
       }
+
+      const input = (block.input ?? {}) as ToolInput;
+      if (onProgress) {
+        const pre = progressBefore(block.name, input);
+        if (pre) await onProgress(pre);
+      }
+      const result = await executeTool(block.name, block.input);
+      if (onProgress) {
+        const post = progressAfter(block.name, input, result);
+        if (post) await onProgress(post);
+      }
+      toolResults.push({
+        type: "tool_result",
+        tool_use_id: block.id,
+        content: result.content,
+        is_error: result.isError,
+      });
     }
     messages.push({ role: "user", content: toolResults });
   }
 
-  return "I started on that but ran out of steps — please check the site and try again if needed.";
+  return {
+    reply: "I started on that but ran out of steps — please check the site and try again if needed.",
+    proposal,
+  };
 }

@@ -1,6 +1,20 @@
 import { revalidatePath } from "next/cache";
-import { buildUserContent, runAgent, type AgentImage } from "@/lib/agent";
-import { downloadImage, sendChatAction, sendMessage } from "@/lib/telegram";
+import {
+  buildUserContent,
+  runAgent,
+  writeMenu,
+  type AgentImage,
+  type MenuItemInput,
+} from "@/lib/agent";
+import { prisma } from "@/lib/db";
+import {
+  answerCallbackQuery,
+  downloadImage,
+  editMessageText,
+  sendChatAction,
+  sendMessage,
+  sendMessageWithButtons,
+} from "@/lib/telegram";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,10 +29,17 @@ type TelegramMessage = {
   photo?: TelegramPhotoSize[];
   document?: TelegramDocument;
 };
+type TelegramCallbackQuery = {
+  id: string;
+  data?: string;
+  from?: { id: number };
+  message?: { message_id: number; chat?: { id: number } };
+};
 type TelegramUpdate = {
   message?: TelegramMessage;
   edited_message?: TelegramMessage;
   channel_post?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
 };
 
 function allowedChatIds(): Set<string> {
@@ -58,6 +79,61 @@ async function collectImages(message: TelegramMessage): Promise<AgentImage[]> {
   return images;
 }
 
+function revalidatePublicPages() {
+  revalidatePath("/");
+  revalidatePath("/menus");
+  revalidatePath("/events");
+}
+
+// Publish / Discard taps on a pending menu capture.
+async function handleCallback(cb: TelegramCallbackQuery): Promise<void> {
+  const chatId = cb.message?.chat?.id ?? cb.from?.id;
+  const messageId = cb.message?.message_id;
+  if (chatId === undefined || messageId === undefined) {
+    await answerCallbackQuery(cb.id);
+    return;
+  }
+  if (!allowedChatIds().has(String(chatId))) {
+    await answerCallbackQuery(cb.id, "Not authorized.");
+    return;
+  }
+
+  await answerCallbackQuery(cb.id);
+
+  const pending = await prisma.pendingMenu.findUnique({ where: { chatId: String(chatId) } });
+  if (!pending) {
+    await editMessageText(chatId, messageId, "This capture has expired.");
+    return;
+  }
+  // A newer capture replaced this one — these buttons are stale.
+  if (pending.messageId && pending.messageId !== messageId) {
+    await editMessageText(chatId, messageId, "Superseded by a newer capture.");
+    return;
+  }
+
+  try {
+    if (cb.data === "pub") {
+      const count = await writeMenu(
+        pending.menuType,
+        JSON.parse(pending.items) as MenuItemInput[],
+      );
+      await prisma.pendingMenu.delete({ where: { chatId: String(chatId) } });
+      revalidatePublicPages();
+      await editMessageText(
+        chatId,
+        messageId,
+        `✅ Published the ${pending.menuType} menu (${count} item${count === 1 ? "" : "s"}) — it's live.`,
+      );
+    } else {
+      await prisma.pendingMenu.delete({ where: { chatId: String(chatId) } });
+      await editMessageText(chatId, messageId, "✖️ Discarded — nothing was published.");
+    }
+  } catch (err) {
+    console.error("Publish error:", err);
+    await editMessageText(chatId, messageId, "⚠️ Something went wrong publishing that.");
+  }
+}
+
 export async function POST(req: Request): Promise<Response> {
   // Verify the request really came from Telegram.
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -72,6 +148,16 @@ export async function POST(req: Request): Promise<Response> {
   try {
     update = (await req.json()) as TelegramUpdate;
   } catch {
+    return Response.json({ ok: true });
+  }
+
+  // Button taps (Publish / Discard).
+  if (update.callback_query) {
+    try {
+      await handleCallback(update.callback_query);
+    } catch (err) {
+      console.error("Telegram callback error:", err);
+    }
     return Response.json({ ok: true });
   }
 
@@ -96,7 +182,7 @@ export async function POST(req: Request): Promise<Response> {
   if (/^\/(start|help)\b/.test(text)) {
     await sendMessage(
       chatId,
-      "Hi! I keep the Bierhaul website up to date.\n\n• Send a photo of a menu (lunch, dinner, cocktails, or specials) and I'll read it and update that page.\n• Or just tell me things like \"add live jazz next Friday at 8pm\" or \"remove the schnitzel from dinner\".\n\nYour chat ID: " +
+      "Hi! I keep the Bierhaul website up to date.\n\n• Send a photo of a menu (lunch, dinner, cocktails, or specials) — I'll read it and show you what I captured to Publish or Discard.\n• Or just tell me things like \"add live jazz next Friday at 8pm\" or \"remove the schnitzel from dinner\" and I'll apply it.\n\nYour chat ID: " +
         chatId,
     );
     return Response.json({ ok: true });
@@ -116,16 +202,47 @@ export async function POST(req: Request): Promise<Response> {
       return Response.json({ ok: true });
     }
 
+    const pendingRow = await prisma.pendingMenu.findUnique({ where: { chatId: String(chatId) } });
+    const pending = pendingRow
+      ? { menuType: pendingRow.menuType, items: JSON.parse(pendingRow.items) as MenuItemInput[] }
+      : undefined;
+
     const content = buildUserContent({ text, images, nowLabel: nowLabel() });
-    const reply = await runAgent(content, (update) => sendMessage(chatId, update));
+    const { reply, proposal } = await runAgent(content, (msg) => sendMessage(chatId, msg), pending);
 
-    // Public pages read from the DB at request time, but revalidate the cached
-    // routes too in case any are statically held.
-    revalidatePath("/");
-    revalidatePath("/menus");
-    revalidatePath("/events");
-
-    await sendMessage(chatId, reply);
+    if (proposal) {
+      // Photo capture staged — show it with Publish/Discard buttons, don't publish yet.
+      const body =
+        proposal.summary +
+        (reply ? `\n\n${reply}` : "") +
+        '\n\nTap ✅ Publish to put it live, or send a correction (e.g. "set the wedge to $16").';
+      const messageId = await sendMessageWithButtons(chatId, body, [
+        [
+          { text: "✅ Publish", callback_data: "pub" },
+          { text: "✖️ Discard", callback_data: "dis" },
+        ],
+      ]);
+      await prisma.pendingMenu.upsert({
+        where: { chatId: String(chatId) },
+        update: {
+          menuType: proposal.menuType,
+          items: JSON.stringify(proposal.items),
+          summary: proposal.summary,
+          messageId,
+        },
+        create: {
+          chatId: String(chatId),
+          menuType: proposal.menuType,
+          items: JSON.stringify(proposal.items),
+          summary: proposal.summary,
+          messageId,
+        },
+      });
+    } else {
+      // Immediate text edit — already applied; pages read fresh from the DB.
+      revalidatePublicPages();
+      await sendMessage(chatId, reply);
+    }
   } catch (err) {
     console.error("Telegram handler error:", err);
     await sendMessage(chatId, "Sorry — something went wrong handling that. Please try again.");

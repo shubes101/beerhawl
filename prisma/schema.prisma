@@ -45,3 +45,14 @@ model Setting {
   key   String @id
   value String
 }
+
+// A menu captured from a photo, awaiting staff approval before it's published.
+// One pending capture per Telegram chat.
+model PendingMenu {
+  chatId    String   @id
+  menuType  String
+  items     String // JSON-encoded [{ section?, name, description?, price?, tags[] }]
+  summary   String
+  messageId Int? // Telegram message id holding the Publish/Discard buttons
+  updatedAt DateTime @updatedAt
+}

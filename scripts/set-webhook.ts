@@ -44,7 +44,7 @@ async function main() {
     body: JSON.stringify({
       url: webhookUrl,
       secret_token: secret || undefined,
-      allowed_updates: ["message", "edited_message", "channel_post"],
+      allowed_updates: ["message", "edited_message", "channel_post", "callback_query"],
     }),
   });
 
