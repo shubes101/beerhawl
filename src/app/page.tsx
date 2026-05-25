@@ -55,7 +55,7 @@ export default async function HomePage() {
           </div>
         </div>
         <div className="bh-hero__media">
-          <ImageSlot src="/bierhaul/photo-bar.webp" alt="The bar at Bierhaul" aspect="4/5" />
+          <ImageSlot src="/bierhaul/photo-hero.webp" alt="Inside the Bierhaul bar" aspect="4/5" />
           <div className="bh-hero__badge">
             <span className="bh-hero__badge__dot" />
             <b>24</b>
