@@ -11,7 +11,7 @@ export function SiteFooter() {
           <img className="bh-footer__logo" src="/bierhaul/logo-bh.webp" alt="" aria-hidden="true" />
           <div className="bh-footer__mark">{restaurant.name}</div>
           <div className="bh-footer__tag">{restaurant.tagline}</div>
-          <div className="bh-footer__small">A modern farmhouse Bierhaul.</div>
+          <div className="bh-footer__small">A charming farmhouse Lagerhaus.</div>
           <Socials />
         </div>
 
