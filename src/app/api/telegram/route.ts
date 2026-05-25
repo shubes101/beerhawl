@@ -28,6 +28,7 @@ type TelegramMessage = {
   caption?: string;
   photo?: TelegramPhotoSize[];
   document?: TelegramDocument;
+  media_group_id?: string;
 };
 type TelegramCallbackQuery = {
   id: string;
@@ -63,26 +64,135 @@ function nowLabel(): string {
   }).format(new Date());
 }
 
-async function collectImages(message: TelegramMessage): Promise<AgentImage[]> {
-  const images: AgentImage[] = [];
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+// The Telegram file_ids of any images in a message (highest-res photo + image docs).
+function collectFileIds(message: TelegramMessage): string[] {
+  const ids: string[] = [];
   if (message.photo && message.photo.length > 0) {
     // The last PhotoSize is the highest resolution.
-    const largest = message.photo[message.photo.length - 1];
-    images.push(await downloadImage(largest.file_id));
+    ids.push(message.photo[message.photo.length - 1].file_id);
   }
-
   if (message.document?.mime_type?.startsWith("image/")) {
-    images.push(await downloadImage(message.document.file_id));
+    ids.push(message.document.file_id);
   }
+  return ids;
+}
 
-  return images;
+async function collectImages(message: TelegramMessage): Promise<AgentImage[]> {
+  return Promise.all(collectFileIds(message).map((id) => downloadImage(id)));
 }
 
 function revalidatePublicPages() {
   revalidatePath("/");
   revalidatePath("/menus");
   revalidatePath("/events");
+}
+
+// Runs the agent on the given image(s)/text, merging into any pending capture,
+// then either stages a menu proposal (Publish/Discard buttons) or sends the
+// immediate reply. Shared by the single-message and album paths.
+async function stageOrReply(
+  chatId: number,
+  images: AgentImage[],
+  text: string,
+): Promise<void> {
+  const pendingRow = await prisma.pendingMenu.findUnique({ where: { chatId: String(chatId) } });
+  const pending = pendingRow
+    ? { menuType: pendingRow.menuType, items: JSON.parse(pendingRow.items) as MenuItemInput[] }
+    : undefined;
+
+  const content = buildUserContent({ text, images, nowLabel: nowLabel() });
+  const { reply, proposal, eightySixed } = await runAgent(
+    content,
+    (msg) => sendMessage(chatId, msg),
+    pending,
+  );
+
+  if (proposal) {
+    // Photo capture staged — show it with Publish/Discard buttons, don't publish yet.
+    const body =
+      proposal.summary +
+      (reply ? `\n\n${reply}` : "") +
+      '\n\nSend more pages to add to this, or tap ✅ Publish to put it live. You can also send a correction (e.g. "set the wedge to $16").';
+    const messageId = await sendMessageWithButtons(chatId, body, [
+      [
+        { text: "✅ Publish", callback_data: "pub" },
+        { text: "✖️ Discard", callback_data: "dis" },
+      ],
+    ]);
+    await prisma.pendingMenu.upsert({
+      where: { chatId: String(chatId) },
+      update: {
+        menuType: proposal.menuType,
+        items: JSON.stringify(proposal.items),
+        summary: proposal.summary,
+        messageId,
+      },
+      create: {
+        chatId: String(chatId),
+        menuType: proposal.menuType,
+        items: JSON.stringify(proposal.items),
+        summary: proposal.summary,
+        messageId,
+      },
+    });
+  } else {
+    // Immediate text edit — already applied; pages read fresh from the DB.
+    revalidatePublicPages();
+    if (eightySixed && eightySixed.length > 0) {
+      // Offer a one-tap recall for each item just 86'd.
+      const buttons = eightySixed.map((e) => [
+        { text: `↩️ Recall ${e.name}`, callback_data: `rcl:${e.itemId}` },
+      ]);
+      await sendMessageWithButtons(chatId, reply, buttons);
+    } else {
+      await sendMessage(chatId, reply);
+    }
+  }
+}
+
+// Telegram delivers an album as several separate webhooks sharing a
+// media_group_id. We buffer each photo, then debounce: whichever webhook sees a
+// stable count after the wait claims the whole set and OCRs the pages together.
+async function handleAlbumMessage(
+  chatId: number,
+  message: TelegramMessage,
+  text: string,
+): Promise<void> {
+  const mediaGroupId = message.media_group_id;
+  if (!mediaGroupId) return;
+  const fileIds = collectFileIds(message);
+  if (fileIds.length === 0) return;
+
+  const where = { chatId: String(chatId), mediaGroupId };
+  await prisma.albumPhoto.createMany({
+    data: fileIds.map((fileId) => ({
+      chatId: String(chatId),
+      mediaGroupId,
+      fileId,
+      caption: text || null,
+    })),
+  });
+
+  // Wait for the rest of the album to arrive. If the count grows during the
+  // wait, a later webhook will be the one to settle this group.
+  const before = await prisma.albumPhoto.count({ where });
+  await sleep(3000);
+  const after = await prisma.albumPhoto.count({ where });
+  if (after !== before) return;
+
+  // Claim the set atomically — only the webhook whose delete removes rows wins.
+  const rows = await prisma.albumPhoto.findMany({ where, orderBy: { createdAt: "asc" } });
+  if (rows.length === 0) return;
+  const claimed = await prisma.albumPhoto.deleteMany({ where: { id: { in: rows.map((r) => r.id) } } });
+  if (claimed.count === 0) return;
+
+  await sendChatAction(chatId, "typing");
+  const images = await Promise.all(rows.map((r) => downloadImage(r.fileId)));
+  // Telegram attaches a caption to one album item; the rest are null.
+  const caption = rows.map((r) => r.caption).filter((c): c is string => !!c).join(" ").trim();
+  await stageOrReply(chatId, images, caption);
 }
 
 // Publish / Discard taps on a pending menu capture.
@@ -206,6 +316,17 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ ok: true });
   }
 
+  // Album: several photos sent together arrive as separate webhooks sharing a
+  // media_group_id. Buffer and OCR them as one menu.
+  if (message.media_group_id) {
+    try {
+      await handleAlbumMessage(chatId, message, text);
+    } catch (err) {
+      console.error("Telegram album handler error:", err);
+    }
+    return Response.json({ ok: true });
+  }
+
   try {
     await sendChatAction(chatId, "typing");
 
@@ -216,59 +337,7 @@ export async function POST(req: Request): Promise<Response> {
       return Response.json({ ok: true });
     }
 
-    const pendingRow = await prisma.pendingMenu.findUnique({ where: { chatId: String(chatId) } });
-    const pending = pendingRow
-      ? { menuType: pendingRow.menuType, items: JSON.parse(pendingRow.items) as MenuItemInput[] }
-      : undefined;
-
-    const content = buildUserContent({ text, images, nowLabel: nowLabel() });
-    const { reply, proposal, eightySixed } = await runAgent(
-      content,
-      (msg) => sendMessage(chatId, msg),
-      pending,
-    );
-
-    if (proposal) {
-      // Photo capture staged — show it with Publish/Discard buttons, don't publish yet.
-      const body =
-        proposal.summary +
-        (reply ? `\n\n${reply}` : "") +
-        '\n\nTap ✅ Publish to put it live, or send a correction (e.g. "set the wedge to $16").';
-      const messageId = await sendMessageWithButtons(chatId, body, [
-        [
-          { text: "✅ Publish", callback_data: "pub" },
-          { text: "✖️ Discard", callback_data: "dis" },
-        ],
-      ]);
-      await prisma.pendingMenu.upsert({
-        where: { chatId: String(chatId) },
-        update: {
-          menuType: proposal.menuType,
-          items: JSON.stringify(proposal.items),
-          summary: proposal.summary,
-          messageId,
-        },
-        create: {
-          chatId: String(chatId),
-          menuType: proposal.menuType,
-          items: JSON.stringify(proposal.items),
-          summary: proposal.summary,
-          messageId,
-        },
-      });
-    } else {
-      // Immediate text edit — already applied; pages read fresh from the DB.
-      revalidatePublicPages();
-      if (eightySixed && eightySixed.length > 0) {
-        // Offer a one-tap recall for each item just 86'd.
-        const buttons = eightySixed.map((e) => [
-          { text: `↩️ Recall ${e.name}`, callback_data: `rcl:${e.itemId}` },
-        ]);
-        await sendMessageWithButtons(chatId, reply, buttons);
-      } else {
-        await sendMessage(chatId, reply);
-      }
-    }
+    await stageOrReply(chatId, images, text);
   } catch (err) {
     console.error("Telegram handler error:", err);
     await sendMessage(chatId, "Sorry — something went wrong handling that. Please try again.");
