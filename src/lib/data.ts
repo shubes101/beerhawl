@@ -71,6 +71,34 @@ export async function getUpcomingEvents(limit?: number) {
   });
 }
 
+export type CreateEventInput = {
+  title: string;
+  date: string; // YYYY-MM-DD
+  description?: string | null;
+  timeLabel?: string | null;
+  location?: string | null;
+};
+
+/** Store at noon UTC so the event renders on the same calendar day everywhere. */
+function dateFromYmd(ymd: string): Date {
+  const d = new Date(`${ymd}T12:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) throw new Error(`Invalid date: ${ymd}`);
+  return d;
+}
+
+/** Centralized event write (used by the Telegram Publish flow + Instagram sync). */
+export async function createEvent(input: CreateEventInput) {
+  return prisma.event.create({
+    data: {
+      title: input.title.trim(),
+      description: input.description ? String(input.description) : null,
+      date: dateFromYmd(input.date),
+      timeLabel: input.timeLabel ? String(input.timeLabel) : null,
+      location: input.location ? String(input.location) : null,
+    },
+  });
+}
+
 /** Specials show by default; hidden only when the flag is explicitly "false". */
 export async function isSpecialsEnabled(): Promise<boolean> {
   const row = await prisma.setting.findUnique({ where: { key: "specials_enabled" } });

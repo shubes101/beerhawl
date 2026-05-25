@@ -6,6 +6,7 @@ import {
   type AgentImage,
   type MenuItemInput,
 } from "@/lib/agent";
+import { createEvent } from "@/lib/data";
 import { prisma } from "@/lib/db";
 import {
   answerCallbackQuery,
@@ -221,6 +222,44 @@ async function handleCallback(cb: TelegramCallbackQuery): Promise<void> {
     await prisma.menuItem.update({ where: { id }, data: { eightySixedAt: null } });
     revalidatePublicPages();
     await editMessageText(chatId, messageId, `↩️ Recalled "${existing.name}" — it's back on the menu.`);
+    return;
+  }
+
+  // Publish / Discard taps on an event detected from Instagram.
+  if (cb.data?.startsWith("evpub:") || cb.data?.startsWith("evdis:")) {
+    const id = cb.data.slice(6);
+    const pe = await prisma.pendingEvent.findUnique({ where: { id } });
+    if (!pe) {
+      await editMessageText(chatId, messageId, "This event proposal has expired.");
+      return;
+    }
+    if (cb.data.startsWith("evdis:")) {
+      await prisma.pendingEvent.delete({ where: { id } });
+      await editMessageText(chatId, messageId, "✖️ Discarded — nothing was added.");
+      return;
+    }
+    try {
+      // Idempotent: don't double-add if the same event already went live
+      // (e.g. published from another chat).
+      const existingEvent = await prisma.event.findFirst({
+        where: { title: { equals: pe.title, mode: "insensitive" }, date: pe.date },
+      });
+      if (!existingEvent) {
+        await createEvent({
+          title: pe.title,
+          date: pe.date.toISOString().slice(0, 10),
+          description: pe.description,
+          timeLabel: pe.timeLabel,
+          location: pe.location,
+        });
+      }
+      await prisma.pendingEvent.delete({ where: { id } });
+      revalidatePublicPages();
+      await editMessageText(chatId, messageId, `✅ Added "${pe.title}" to the events page.`);
+    } catch (err) {
+      console.error("Event publish error:", err);
+      await editMessageText(chatId, messageId, "⚠️ Something went wrong adding that event.");
+    }
     return;
   }
 

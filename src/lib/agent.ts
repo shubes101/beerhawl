@@ -670,3 +670,115 @@ export async function runAgent(
     eightySixed,
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Event extraction from social captions (constrained — no menu tools)       */
+/* -------------------------------------------------------------------------- */
+
+export type ProposedEvent = {
+  title: string;
+  date: string; // YYYY-MM-DD
+  description?: string;
+  timeLabel?: string;
+  location?: string;
+};
+
+// A single forced tool: untrusted captions can NEVER reach the menu/specials
+// tools, only describe events back to us.
+const EVENT_EXTRACT_TOOL: Anthropic.Tool = {
+  name: "report_events",
+  description:
+    "Report every specific, dated upcoming event announced in the caption. Pass an empty array if the caption isn't announcing a dated event.",
+  input_schema: {
+    type: "object",
+    properties: {
+      events: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "Short event name, e.g. 'Live Jazz Night'." },
+            date: {
+              type: "string",
+              description: "Calendar date in YYYY-MM-DD. Resolve relative dates (e.g. 'this Friday') using the current date provided.",
+            },
+            description: { type: "string", description: "One short line of detail. Optional." },
+            time_label: {
+              type: "string",
+              description: "Human-readable time as written, e.g. '7:00 PM' or '6–9 PM'. Optional.",
+            },
+            location: {
+              type: "string",
+              description: "Only if a place other than the restaurant is named. Optional.",
+            },
+          },
+          required: ["title", "date"],
+        },
+      },
+    },
+    required: ["events"],
+  },
+};
+
+const EVENT_EXTRACT_SYSTEM = `You read social-media captions from ${restaurant.name} and extract any specific, dated UPCOMING events they announce (live music, trivia, tastings, dinners, parties, markets, etc.).
+
+Rules:
+- Only report an event when there is a concrete calendar date you can resolve to YYYY-MM-DD. Resolve relative dates ("this Friday", "next weekend", "tomorrow") from the current date given in the message. Assume the date is in the future; never report a date in the past.
+- A caption may announce zero, one, or several events — report each one.
+- Do NOT invent events. Generic posts (a food photo, "open tonight!", a dateless beer drop) are NOT events — report an empty array.
+- Keep titles short and factual; read times and places exactly as written.
+- Always answer by calling report_events exactly once.`;
+
+/**
+ * Pulls any dated, upcoming events out of one Instagram caption. Uses the cheap
+ * text model with a single FORCED tool, so a caption can only ever produce event
+ * proposals — it can't touch menus or specials. Returns [] for non-events or on
+ * any error. Does not write to the DB.
+ */
+export async function extractEvents(caption: string, nowLabel: string): Promise<ProposedEvent[]> {
+  const text = caption.trim();
+  if (!text) return [];
+
+  let response: Anthropic.Message;
+  try {
+    response = await client().messages.create({
+      model: TEXT_MODEL,
+      max_tokens: 1024,
+      system: EVENT_EXTRACT_SYSTEM,
+      tools: [EVENT_EXTRACT_TOOL],
+      tool_choice: { type: "tool", name: "report_events" },
+      messages: [
+        {
+          role: "user",
+          content: `Current date and time (America/New_York): ${nowLabel}\n\nInstagram caption:\n"""\n${text}\n"""`,
+        },
+      ],
+    });
+  } catch (err) {
+    console.error("[agent] extractEvents error:", err);
+    return [];
+  }
+
+  const block = response.content.find(
+    (b): b is Anthropic.ToolUseBlock => b.type === "tool_use" && b.name === "report_events",
+  );
+  if (!block) return [];
+
+  const raw = ((block.input ?? {}) as { events?: unknown }).events;
+  const arr = Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [];
+
+  return arr
+    .map((e) => ({
+      title: String(e.title ?? "").trim(),
+      date: String(e.date ?? "").trim(),
+      description: e.description ? String(e.description) : undefined,
+      timeLabel: e.time_label ? String(e.time_label) : undefined,
+      location: e.location ? String(e.location) : undefined,
+    }))
+    .filter(
+      (e) =>
+        e.title.length > 0 &&
+        /^\d{4}-\d{2}-\d{2}$/.test(e.date) &&
+        !Number.isNaN(new Date(`${e.date}T12:00:00.000Z`).getTime()),
+    );
+}

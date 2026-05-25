@@ -4,6 +4,10 @@ Action items that only you can do (accounts, credentials, decisions). The code
 that depends on each item is already stubbed and will light up once you provide
 the values.
 
+> **Step-by-step credential setup** for the Untappd and Instagram integrations
+> lives in [`INTEGRATIONS.md`](./INTEGRATIONS.md). This file is the high-level
+> checklist; that file has the exact env vars and how-to.
+
 ## Untappd: beer list + check-in leaderboard
 
 Both features come from **Untappd for Business (UTFB) Premium**. Right now both
@@ -41,3 +45,16 @@ beers over the last 6 hours).
 - [ ] Message the bot, grab the chat ID it replies with, add it to
       `TELEGRAM_ALLOWED_CHAT_IDS`.
 - [ ] After deploy, run `npm run telegram:set-webhook`.
+
+## Instagram → events sync (ships DISABLED)
+
+Auto-detects events in our own Instagram posts and stages them for a
+Publish/Discard tap in Telegram. Built and dormant — see
+[`INTEGRATIONS.md`](./INTEGRATIONS.md) for the full Meta setup.
+
+- [ ] Convert the IG account to **Business/Creator** and link a **Facebook Page**.
+- [ ] Create a **Meta app** + Instagram Graph API product; generate a
+      **long-lived** token and find the IG-business account id.
+- [ ] Set `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_USER_ID`, and `CRON_SECRET`.
+- [ ] Flip `INSTAGRAM_EVENT_SYNC_ENABLED=true` to turn it on, then redeploy.
+- [ ] Remember: the long-lived token **expires ~60 days** and must be refreshed.
