@@ -55,6 +55,9 @@ spot any that announce a dated event, and sends each one to Telegram with
 **Publish / Discard** buttons — the same review flow as menu photos. Nothing goes
 on the events page without a tap.
 
+> **Tip:** detection reads the post's **caption text**, not the flyer image. Put
+> the event's date and time in the caption — a graphic alone won't be read.
+
 > **Important:** Instagram only allows programmatic reads of an account you
 > own/manage, through the **Instagram Graph API** (a Business or Creator account
 > linked to a Facebook Page). Reading third-party accounts isn't possible via the

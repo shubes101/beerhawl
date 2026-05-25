@@ -2,12 +2,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/db";
 import { MENU_TYPES, MenuType, isMenuType, restaurant } from "@/lib/restaurant";
 
-// Per-request model routing: photos (OCR) use the vision-strong model; text-only
-// requests downshift to a cheaper one. ANTHROPIC_MODEL, if set, forces a single
-// model for both (disables routing).
+// Per-request model routing: menu photos (OCR) use the vision-strong model;
+// text-only chat uses a cheaper model; Instagram caption→event extraction uses
+// the cheapest model (short, clean captions). ANTHROPIC_MODEL, if set, forces a
+// single model for all three (disables routing).
 const FORCED_MODEL = process.env.ANTHROPIC_MODEL;
 const VISION_MODEL = FORCED_MODEL ?? process.env.ANTHROPIC_MODEL_VISION ?? "claude-opus-4-7";
 const TEXT_MODEL = FORCED_MODEL ?? process.env.ANTHROPIC_MODEL_TEXT ?? "claude-sonnet-4-6";
+const EVENT_MODEL = FORCED_MODEL ?? process.env.ANTHROPIC_MODEL_EVENTS ?? "claude-haiku-4-5-20251001";
 const MAX_TURNS = 8;
 
 // Constructed lazily so a missing ANTHROPIC_API_KEY only fails at request time,
@@ -730,10 +732,10 @@ Rules:
 - Always answer by calling report_events exactly once.`;
 
 /**
- * Pulls any dated, upcoming events out of one Instagram caption. Uses the cheap
- * text model with a single FORCED tool, so a caption can only ever produce event
- * proposals — it can't touch menus or specials. Returns [] for non-events or on
- * any error. Does not write to the DB.
+ * Pulls any dated, upcoming events out of one Instagram caption. Uses the cheapest
+ * model (ANTHROPIC_MODEL_EVENTS, default Haiku 4.5) with a single FORCED tool, so a
+ * caption can only ever produce event proposals — it can't touch menus or specials.
+ * Returns [] for non-events or on any error. Does not write to the DB.
  */
 export async function extractEvents(caption: string, nowLabel: string): Promise<ProposedEvent[]> {
   const text = caption.trim();
@@ -742,7 +744,7 @@ export async function extractEvents(caption: string, nowLabel: string): Promise<
   let response: Anthropic.Message;
   try {
     response = await client().messages.create({
-      model: TEXT_MODEL,
+      model: EVENT_MODEL,
       max_tokens: 1024,
       system: EVENT_EXTRACT_SYSTEM,
       tools: [EVENT_EXTRACT_TOOL],
