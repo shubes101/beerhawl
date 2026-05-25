@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { restaurant } from "@/lib/restaurant";
+import { mapsDirectionsUrl, restaurant } from "@/lib/restaurant";
 
 const NAV = [
   { label: "Home", href: "/" },
@@ -65,6 +65,19 @@ export function SiteHeader() {
       </nav>
 
       <div className="bh-header__right">
+        <a
+          className="bh-directions"
+          href={mapsDirectionsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Get directions on Google Maps"
+        >
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M13.7 2.3 2.5 6.9a.5.5 0 0 0 .04.94l3.9 1.36 1.36 3.9a.5.5 0 0 0 .94.04L13.7 2.3z" />
+          </svg>
+          <span>Directions</span>
+        </a>
+
         <button
           className="bh-modetoggle"
           aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}

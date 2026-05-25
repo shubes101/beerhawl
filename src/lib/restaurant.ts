@@ -23,6 +23,11 @@ export const restaurant = {
   ],
 } as const;
 
+// Google Maps directions to the restaurant (opens turn-by-turn navigation).
+export const mapsDirectionsUrl =
+  "https://www.google.com/maps/dir/?api=1&destination=" +
+  encodeURIComponent(restaurant.address.join(", "));
+
 export const MENU_TYPES = ["lunch", "dinner", "cocktail", "specials"] as const;
 export type MenuType = (typeof MENU_TYPES)[number];
 
