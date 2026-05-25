@@ -284,7 +284,7 @@ body {
 }
 .bh-hero__logo:hover { transform: rotate(2deg) scale(1.04); }
 .bh-hero__badge {
-  position: absolute; top: 1rem; left: 1rem;
+  position: absolute; top: 1rem; right: 1rem;
   display: inline-flex; align-items: center; gap: 0.55rem;
   padding: 0.55rem 0.95rem 0.55rem 0.8rem;
   background: color-mix(in oklab, var(--ink) 80%, transparent);
