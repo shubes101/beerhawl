@@ -103,7 +103,7 @@ export default async function HomePage() {
         />
         <div className="bh-space-grid">
           <figure className="bh-space-fig">
-            <ImageSlot src="/bierhaul/thebar.png" alt="The bar" />
+            <ImageSlot src="/bierhaul/thebar.webp" alt="The bar" />
             <figcaption>The Bar</figcaption>
           </figure>
           <figure className="bh-space-fig">
@@ -111,7 +111,7 @@ export default async function HomePage() {
             <figcaption>The Attic</figcaption>
           </figure>
           <figure className="bh-space-fig">
-            <ImageSlot src="/bierhaul/patio.png" alt="The patio at sunset" />
+            <ImageSlot src="/bierhaul/patio.webp" alt="The patio at sunset" />
             <figcaption>A Good Time</figcaption>
           </figure>
         </div>
