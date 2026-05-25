@@ -71,3 +71,26 @@ model AlbumPhoto {
 
   @@index([chatId, mediaGroupId])
 }
+
+// An Instagram post the event poller has already evaluated, so the daily cron
+// doesn't re-read it. id = Instagram media id (cf. Untappd's checkinId dedup).
+model ProcessedPost {
+  id          String   @id // Instagram media id
+  permalink   String?
+  processedAt DateTime @default(now())
+}
+
+// An event detected in an Instagram caption, staged for a Publish/Discard tap
+// in Telegram before it goes on the events page. Mirrors PendingMenu.
+model PendingEvent {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime // noon UTC, same convention as Event
+  timeLabel   String?
+  location    String?
+  sourceUrl   String? // Instagram permalink, shown in the review message
+  chatId      String
+  messageId   Int? // Telegram message id holding the Publish/Discard buttons
+  createdAt   DateTime @default(now())
+}
