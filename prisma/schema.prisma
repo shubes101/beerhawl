@@ -57,3 +57,17 @@ model PendingMenu {
   messageId Int? // Telegram message id holding the Publish/Discard buttons
   updatedAt DateTime @updatedAt
 }
+
+// Buffer for Telegram albums (multiple photos sent at once). Each album item
+// arrives as a separate webhook sharing a media_group_id; we stash one row per
+// photo, then one invocation debounces, claims the set, and OCRs them together.
+model AlbumPhoto {
+  id           String   @id @default(cuid())
+  chatId       String
+  mediaGroupId String
+  fileId       String // Telegram file_id, re-downloaded at process time
+  caption      String? // album caption, if any (Telegram attaches it to one item)
+  createdAt    DateTime @default(now())
+
+  @@index([chatId, mediaGroupId])
+}

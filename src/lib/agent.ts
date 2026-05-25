@@ -433,8 +433,8 @@ You can manage:
 
 How to work:
 - ALWAYS act in the same response: when you decide to make a change, call the matching tool immediately. Never reply that you'll do something and then stop without calling a tool.
-- PHOTO of a menu → call propose_menu (NOT replace_menu). Read every item, price, section and dietary mark and stage the FULL menu. This does NOT publish — the staff get a "captured" readout with Publish/Discard buttons. Extract everything, don't just describe it. If it's genuinely unclear which menu the photo is (lunch, dinner, cocktail, specials), ask first.
-- If the message note says a menu capture is PENDING and this message corrects it, call propose_menu again with the full corrected menu (re-staging it for review). Do not use replace_menu for photo captures.
+- PHOTO(S) of a menu → call propose_menu (NOT replace_menu). A single message may contain SEVERAL photos that are different PAGES of the same menu — read ALL of them and combine into ONE proposal. Read every item, price, section and dietary mark and stage the FULL menu. This does NOT publish — the staff get a "captured" readout with Publish/Discard buttons. Extract everything, don't just describe it. If it's genuinely unclear which menu the photo is (lunch, dinner, cocktail, specials), ask first.
+- If the message note says a menu capture is PENDING: when this message is a CORRECTION, call propose_menu again with the full corrected menu. When this message is ANOTHER PHOTO of the SAME menu type, treat it as ADDITIONAL PAGE(S) — call propose_menu with the pending items PLUS the new page's items, combined into the full menu in order (don't duplicate a section header or an item that already appears). If the new photo is clearly a DIFFERENT menu type, propose that as a new menu instead. Always re-stage the full menu for review; never use replace_menu for photo captures.
 - TEXT requests ("add taco night next Thursday at 6", "86 the garden gimlet") are applied immediately with the matching tool (replace_menu, add_menu_item, eighty_six_item, recall_item, remove_menu_item, add_event, remove_event, set_specials_enabled). To act on a single item, call list_menu first to get its id, then call the right tool by id.
 - Taking an item off the menu: "86 X", "we're out of X", "drop X", "X is sold out / unavailable" → eighty_six_item (a TEMPORARY sold-out that's remembered and can be recalled — the item stays listed, struck-through). Bringing it back: "recall X", "X is back", "un-86 X" → recall_item. Use remove_menu_item ONLY when staff are explicit that it should be gone for good ("delete X permanently", "remove X for good"). When unsure between 86 and permanent delete, prefer eighty_six_item since it's reversible. list_menu marks which items are currently 86'd, so use it to pick the right id to recall.
 - To hide or show the Specials menu, use set_specials_enabled — off when there are no specials, on when they return.
@@ -582,9 +582,9 @@ export async function runAgent(
   if (pending) {
     firstContent.unshift({
       type: "text",
-      text: `NOTE: a ${pending.menuType} menu capture is PENDING review (not yet published). Current pending items: ${JSON.stringify(
+      text: `NOTE: a ${pending.menuType} menu capture is PENDING review (not yet published). These are the pages captured so far: ${JSON.stringify(
         pending.items,
-      )}. If this message corrects it, call propose_menu again with the full corrected ${pending.menuType} menu. If it's unrelated, handle it normally.`,
+      )}. If this message is ANOTHER PHOTO of the ${pending.menuType} menu, it's an ADDITIONAL PAGE — call propose_menu with these items PLUS the new page's items combined into the full menu (preserve order, no duplicates). If this message CORRECTS the capture, call propose_menu with the full corrected ${pending.menuType} menu. If it's a different menu type or unrelated, handle it normally.`,
     });
   }
 
