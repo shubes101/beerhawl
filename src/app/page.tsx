@@ -102,17 +102,17 @@ export default async function HomePage() {
           blurb="Biergarten, a beautiful rustic bar, a quiet dining room, an event space, and even rooms to stay."
         />
         <div className="bh-space-grid">
-          <figure className="bh-space-fig bh-space-fig--lg">
-            <ImageSlot src="/bierhaul/photo-bar.webp" alt="The bar" />
+          <figure className="bh-space-fig">
+            <ImageSlot src="/bierhaul/thebar.png" alt="The bar" />
             <figcaption>The Bar</figcaption>
           </figure>
           <figure className="bh-space-fig">
-            <ImageSlot src="/bierhaul/photo-attic-sign.webp" alt="The Attic sign" />
+            <ImageSlot src="/bierhaul/BierhaulHDR-2.webp" alt="The Attic event space" />
             <figcaption>The Attic</figcaption>
           </figure>
           <figure className="bh-space-fig">
-            <ImageSlot src="/bierhaul/photo-shuffleboard.webp" alt="Shuffleboard" />
-            <figcaption>The Shuffleboard</figcaption>
+            <ImageSlot src="/bierhaul/patio.png" alt="The patio at sunset" />
+            <figcaption>A Good Time</figcaption>
           </figure>
         </div>
       </section>
