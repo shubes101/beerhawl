@@ -11,7 +11,7 @@ export const restaurant = {
     facebook: "https://www.facebook.com/Bierhaul/",
   },
   about:
-    "A charming farmhouse lagerhaus in the rolling country west of Philly. Twenty-four taps, a thoughtful menu, and long communal tables built for slowing down.",
+    "A charming farmhouse Lagerhaus in the rolling country west of Philly. Twenty-four taps, a thoughtful menu, and long communal tables built for slowing down.",
   hours: [
     { day: "Monday", time: "Closed" },
     { day: "Tuesday", time: "12:00 PM – 11:00 PM" },
