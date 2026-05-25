@@ -123,7 +123,7 @@ export default async function HomePage() {
         <SectionHeading
           eyebrow="Our Kitchen & Bar"
           title="Menus"
-          blurb="Updated weekly. Texted in from the line."
+          blurb="Set seasonally, updated directly from the kitchen. Always up to date."
         />
         <div className="bh-menulinks">
           {visibleMenuTypes.map((type, i) => {
