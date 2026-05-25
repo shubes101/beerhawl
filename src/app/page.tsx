@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Arrow, Button, Eyebrow, ImageSlot, SectionHeading } from "@/components/bh";
 import { EventCard } from "@/components/EventCard";
+import { HeroVideo } from "@/components/HeroVideo";
 import { getAllMenus, getUpcomingEvents, isSpecialsEnabled, menuItemCount } from "@/lib/data";
 import { MENU_LABELS, MENU_TYPES, restaurant } from "@/lib/restaurant";
 
@@ -55,7 +56,7 @@ export default async function HomePage() {
           </div>
         </div>
         <div className="bh-hero__media">
-          <ImageSlot src="/bierhaul/thepour.webp" alt="A fresh beer pour at Bierhaul" aspect="4/5" />
+          <HeroVideo />
           <div className="bh-hero__badge">
             <span className="bh-hero__badge__dot" />
             <b>24</b>
