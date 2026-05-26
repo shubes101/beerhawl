@@ -32,11 +32,11 @@ export default async function HomePage() {
             {restaurant.city} · Est. {restaurant.established}
           </Eyebrow>
           <h1 className="bh-hero__title">
-            A friendly seat,
+            A friendly face,
             <br />
-            a cold pour,
+            a perfect pour,
             <br />
-            <em>stay a while.</em>
+            <em>enjoy</em>
           </h1>
           <p className="bh-hero__about">{restaurant.about}</p>
           <div className="bh-hero__ctas">
