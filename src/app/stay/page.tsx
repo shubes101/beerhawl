@@ -8,16 +8,38 @@ export const metadata = {
 // Each link runs a search of the platform pre-filled with our location. There
 // is no public Airbnb/Vrbo listings API, so we hand off to the platforms.
 const ADDRESS = restaurant.address.join(", ");
+
+// Airbnb's slug-based geocoder mishandles small US towns ("Thornton, PA" can
+// resolve to Thornton-near-Paris), so we drive their map search via a bounding
+// box around Thornton / Chadds Ford / Glen Mills / Media instead.
+const AIRBNB_BBOX = {
+  ne_lat: 40.03,
+  ne_lng: -75.33,
+  sw_lat: 39.77,
+  sw_lng: -75.7,
+  zoom: 11,
+};
+const AIRBNB_URL =
+  "https://www.airbnb.com/s/homes?" +
+  new URLSearchParams({
+    ne_lat: String(AIRBNB_BBOX.ne_lat),
+    ne_lng: String(AIRBNB_BBOX.ne_lng),
+    sw_lat: String(AIRBNB_BBOX.sw_lat),
+    sw_lng: String(AIRBNB_BBOX.sw_lng),
+    zoom: String(AIRBNB_BBOX.zoom),
+    search_by_map: "true",
+  }).toString();
+
 const PLATFORMS = [
   {
     name: "Airbnb",
     sub: "Homes, cabins, and the occasional farm stay around us.",
-    href: `https://www.airbnb.com/s/${encodeURIComponent(restaurant.city)}/homes`,
+    href: AIRBNB_URL,
   },
   {
     name: "Vrbo",
     sub: "Whole-house rentals — built for groups and longer stays.",
-    href: `https://www.vrbo.com/search?destination=${encodeURIComponent(restaurant.city)}`,
+    href: `https://www.vrbo.com/search?destination=${encodeURIComponent("Thornton Center, PA")}`,
   },
   {
     name: "Booking.com",
