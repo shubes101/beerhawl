@@ -5,7 +5,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-const ORDER = ["/", "/menus", "/events", "/leaderboard", "/contact"];
+const ORDER = ["/", "/menus", "/events", "/stay", "/leaderboard", "/contact"];
 
 function indexFor(pathname: string): number {
   if (pathname === "/") return 0;
