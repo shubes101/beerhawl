@@ -114,6 +114,27 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "update_menu_item",
+    description:
+      "Update one or more fields of a single menu item, identified by id. Use for in-place corrections like price changes (\"the schnitzel is $18, not $16\"), dietary tags (\"the wings are gluten free\"), name fixes, section moves, or description tweaks. Omit any field you don't want to change — only the provided fields are updated. For tags: the array REPLACES the existing tags, so include any tags you want to keep. Call list_menu first to find the id (and read current tags, if you'll be touching tags).",
+    input_schema: {
+      type: "object",
+      properties: {
+        item_id: { type: "string" },
+        section: { type: "string" },
+        name: { type: "string" },
+        description: { type: "string" },
+        price: { type: "string" },
+        tags: {
+          type: "array",
+          items: { type: "string", enum: ["veg", "vgn", "gf", "gfo"] },
+          description: "Dietary tags. REPLACES the prior tags entirely — include any existing tags you want to keep. (v)→veg, (veg)→vgn, (GF)→gf, (GFO)→gfo.",
+        },
+      },
+      required: ["item_id"],
+    },
+  },
+  {
     name: "remove_menu_item",
     description:
       "PERMANENTLY delete a single menu item by its id. Only use when staff explicitly want it gone for good (e.g. \"delete the schnitzel permanently\"). For a temporary sold-out, use eighty_six_item instead. Call list_menu first to find the id.",
@@ -319,6 +340,40 @@ async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
         return ok({ added: { id: created.id, name: created.name } });
       }
 
+      case "update_menu_item": {
+        const id = String(args.item_id ?? "");
+        const existing = await prisma.menuItem.findUnique({ where: { id } });
+        if (!existing) return fail("No menu item with that id.");
+
+        const data: {
+          section?: string | null;
+          name?: string;
+          description?: string | null;
+          price?: string | null;
+          tags?: string[];
+        } = {};
+        if (args.section !== undefined) {
+          data.section = args.section ? String(args.section) : null;
+        }
+        if (args.name !== undefined) {
+          const trimmed = String(args.name).trim();
+          if (!trimmed) return fail("Name cannot be empty.");
+          data.name = trimmed;
+        }
+        if (args.description !== undefined) {
+          data.description = args.description ? String(args.description) : null;
+        }
+        if (args.price !== undefined) {
+          data.price = args.price === null ? null : String(args.price);
+        }
+        if (args.tags !== undefined) data.tags = cleanTags(args.tags);
+
+        if (Object.keys(data).length === 0) return fail("No fields provided to update.");
+
+        const updated = await prisma.menuItem.update({ where: { id }, data });
+        return ok({ updated: { id: updated.id, name: updated.name } });
+      }
+
       case "remove_menu_item": {
         const id = String(args.item_id ?? "");
         const existing = await prisma.menuItem.findUnique({ where: { id } });
@@ -426,7 +481,7 @@ async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
 const SYSTEM: Anthropic.TextBlockParam[] = [
   {
     type: "text",
-    text: `You are the content manager for ${restaurant.name} in ${restaurant.city}. You receive messages and photos from the restaurant's staff over Telegram and keep the public website up to date.
+    text: `You are BH-86, ${restaurant.name}'s Protocol Droid — the content manager for ${restaurant.name} in ${restaurant.city}. You receive messages and photos from the restaurant's staff over Telegram and keep the public website up to date.
 
 You can manage:
 - Menus: ${MENU_TYPES.join(", ")}.
@@ -437,13 +492,14 @@ How to work:
 - ALWAYS act in the same response: when you decide to make a change, call the matching tool immediately. Never reply that you'll do something and then stop without calling a tool.
 - PHOTO(S) of a menu → call propose_menu (NOT replace_menu). A single message may contain SEVERAL photos that are different PAGES of the same menu — read ALL of them and combine into ONE proposal. Read every item, price, section and dietary mark and stage the FULL menu. This does NOT publish — the staff get a "captured" readout with Publish/Discard buttons. Extract everything, don't just describe it. If it's genuinely unclear which menu the photo is (lunch, dinner, cocktail, specials), ask first.
 - If the message note says a menu capture is PENDING: when this message is a CORRECTION, call propose_menu again with the full corrected menu. When this message is ANOTHER PHOTO of the SAME menu type, treat it as ADDITIONAL PAGE(S) — call propose_menu with the pending items PLUS the new page's items, combined into the full menu in order (don't duplicate a section header or an item that already appears). If the new photo is clearly a DIFFERENT menu type, propose that as a new menu instead. Always re-stage the full menu for review; never use replace_menu for photo captures.
-- TEXT requests ("add taco night next Thursday at 6", "86 the garden gimlet") are applied immediately with the matching tool (replace_menu, add_menu_item, eighty_six_item, recall_item, remove_menu_item, add_event, remove_event, set_specials_enabled). To act on a single item, call list_menu first to get its id, then call the right tool by id.
+- TEXT requests ("add taco night next Thursday at 6", "86 the garden gimlet") are applied immediately with the matching tool (replace_menu, add_menu_item, update_menu_item, eighty_six_item, recall_item, remove_menu_item, add_event, remove_event, set_specials_enabled). To act on a single item, call list_menu first to get its id, then call the right tool by id.
 - Taking an item off the menu: "86 X", "we're out of X", "drop X", "X is sold out / unavailable" → eighty_six_item (a TEMPORARY sold-out that's remembered and can be recalled — the item stays listed, struck-through). Bringing it back: "recall X", "X is back", "un-86 X" → recall_item. Use remove_menu_item ONLY when staff are explicit that it should be gone for good ("delete X permanently", "remove X for good"). When unsure between 86 and permanent delete, prefer eighty_six_item since it's reversible. list_menu marks which items are currently 86'd, so use it to pick the right id to recall.
+- Corrections to an existing item ("the wings are gluten free", "the schnitzel is $18, not $16", "rename X to Y", "move X under Starters") → use update_menu_item. Call list_menu first to find the id (and read the current tags, if you'll be touching tags), then update_menu_item with ONLY the field(s) being changed. For tags, pass the FULL desired array — it REPLACES the existing tags entirely, so include any tags you're keeping.
 - To hide or show the Specials menu, use set_specials_enabled — off when there are no specials, on when they return.
 - Resolve relative dates using the current date given in the message.
 - Read prices and item names exactly as written; don't invent items, descriptions, or prices. If something in a photo is unreadable, make your best guess and call it out.
 - Capture dietary marks as each item's tags: (v)→veg, (veg)→vgn, (GF)→gf, (GFO)→gfo.
-- Final reply: one short, friendly line. For text edits, summarize what you changed and invite corrections ("…— let me know if it needs any fixes."). For a staged photo capture, tell them to review and tap Publish (or send a tweak). No preamble, no markdown.`,
+- Final reply: one short, polite line in the slightly fussy, formal voice of a protocol droid (think C-3PO) — courteous and a touch anxious to please; sparingly drop in turns like "I do believe", "if I may say so", "I should think", "do let me know". Keep it brief; do not lay the persona on too thick. For text edits, summarize what you changed and invite corrections (e.g. "Do let me know if any adjustment is required."). For a staged photo capture, tell them to review and tap Publish (or send a tweak). No preamble, no markdown.`,
     cache_control: { type: "ephemeral" },
   },
 ];
@@ -507,6 +563,10 @@ function progressBefore(name: string, input: ToolInput): string | null {
       input.menu_type ?? "menu",
     )} menu…`;
   }
+  if (name === "update_menu_item") {
+    const newName = input.name ? String(input.name).trim() : "";
+    return newName ? `✏️ Updating "${newName}"…` : "✏️ Updating that item…";
+  }
   if (name === "add_event") {
     const when = input.date ? ` on ${String(input.date)}` : "";
     return `📅 Adding event "${String(input.title ?? "").trim()}"${when}…`;
@@ -533,6 +593,15 @@ function progressAfter(name: string, input: ToolInput, result: ToolOutput): stri
     }
     case "add_menu_item":
       return `✅ Added "${String(input.name ?? "").trim()}" — it's live on the site.`;
+    case "update_menu_item": {
+      let name = "that item";
+      try {
+        name = (JSON.parse(result.content) as { updated?: { name?: string } }).updated?.name ?? name;
+      } catch {
+        /* keep default */
+      }
+      return `✅ Updated "${name}" — the change is live on the site.`;
+    }
     case "remove_menu_item":
       return "✅ Removed that item from the site.";
     case "eighty_six_item": {
