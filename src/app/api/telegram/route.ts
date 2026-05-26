@@ -345,7 +345,7 @@ export async function POST(req: Request): Promise<Response> {
   if (/^\/(start|help)\b/.test(text)) {
     await sendMessage(
       chatId,
-      "Hi! I keep the Bierhaul website up to date.\n\n• Send a photo of a menu (lunch, dinner, cocktails, or specials) — I'll read it and show you what I captured to Publish or Discard.\n• Or just tell me things like \"add live jazz next Friday at 8pm\" or \"86 the garden gimlet\" (marks it sold out — tap Recall, or say \"recall the garden gimlet\", to bring it back).\n\nYour chat ID: " +
+      "Greetings — I am BH-88, Bierhaul's Protocol Droid. I keep the website up to date.\n\n• Send a photo of a menu (lunch, dinner, cocktails, or specials) — I'll read it and show you what I captured to Publish or Discard.\n• Or just tell me things like \"add live jazz next Friday at 8pm\" or \"86 the garden gimlet\" (marks it sold out — tap Recall, or say \"recall the garden gimlet\", to bring it back).\n\nYour chat ID: " +
         chatId,
     );
     return Response.json({ ok: true });
