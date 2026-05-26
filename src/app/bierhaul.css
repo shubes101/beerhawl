@@ -413,6 +413,40 @@ body {
 }
 .bh-menu-legend { margin-top: 0.5rem; font-size: 0.78rem; letter-spacing: 0.04em; color: var(--text-3); }
 
+/* Search + active-tag chip above the tabs */
+.bh-menu-filter { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin: 0.9rem 0 0.2rem; }
+.bh-menu-filter__input {
+  flex: 1 1 14rem; min-width: 0;
+  font-family: var(--font-body); font-size: 0.95rem;
+  padding: 0.55rem 0.95rem; color: var(--text); background: transparent;
+  border: 1px solid var(--border); border-radius: 999px;
+  transition: border-color 160ms, background 160ms;
+}
+.bh-menu-filter__input::placeholder { color: var(--text-3); }
+.bh-menu-filter__input:focus {
+  outline: none; border-color: var(--amber);
+  background: color-mix(in oklab, var(--amber) 4%, transparent);
+}
+.bh-menu-filter__chip {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  font-family: var(--font-body); font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--on-accent); background: var(--amber);
+  border: 1px solid var(--amber); border-radius: 999px;
+  padding: 0.42rem 0.85rem; cursor: pointer; transition: filter 160ms;
+}
+.bh-menu-filter__chip:hover { filter: brightness(1.08); }
+
+/* Clickable dietary badges (VEG / VGN / GF / GF*) */
+.bh-tag--clickable {
+  background: transparent; margin: 0; cursor: pointer;
+  transition: background 140ms, color 140ms, border-color 140ms;
+}
+.bh-tag--clickable:hover { background: color-mix(in oklab, var(--amber) 12%, transparent); }
+.bh-tag--clickable.is-active {
+  background: var(--amber); color: var(--on-accent); border-color: var(--amber);
+}
+
 .bh-untappd-link { display: inline-flex; align-items: center; font-size: 0.85rem; color: var(--amber); letter-spacing: 0.04em; border-bottom: 1px solid transparent; transition: border-color 160ms; }
 .bh-untappd-link:hover { border-color: var(--amber); }
 
