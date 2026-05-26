@@ -1,5 +1,6 @@
 import { SectionHeading } from "@/components/bh";
 import { MenusTabs } from "@/components/MenusTabs";
+import { MenuFilterBar } from "@/components/MenuFilterBar";
 import { MenuSections } from "@/components/MenuSections";
 import { BeerMenu } from "@/components/BeerMenu";
 import { getAllMenus, isSpecialsEnabled } from "@/lib/data";
@@ -31,6 +32,8 @@ export default async function MenusPage() {
           we&apos;re rotating.
         </p>
       </div>
+
+      <MenuFilterBar />
 
       <MenusTabs tabs={tabs} />
 
