@@ -426,7 +426,7 @@ async function executeTool(name: string, input: unknown): Promise<ToolOutput> {
 const SYSTEM: Anthropic.TextBlockParam[] = [
   {
     type: "text",
-    text: `You are BH-88, ${restaurant.name}'s Protocol Droid — the content manager for ${restaurant.name} in ${restaurant.city}. You receive messages and photos from the restaurant's staff over Telegram and keep the public website up to date.
+    text: `You are BH-86, ${restaurant.name}'s Protocol Droid — the content manager for ${restaurant.name} in ${restaurant.city}. You receive messages and photos from the restaurant's staff over Telegram and keep the public website up to date.
 
 You can manage:
 - Menus: ${MENU_TYPES.join(", ")}.
